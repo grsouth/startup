@@ -1,3 +1,3 @@
 # startup
 
-This is the second time I'm editing it (on github)
+Something I found interesting is the way in which you can handle merge conflicts right in VSCode itself.
