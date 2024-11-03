@@ -1,1 +1,3 @@
-# startup
+# Startup
+
+## [Notes](./notes/notes.md)
