@@ -31,3 +31,11 @@ My goal is to create a personalized Homepage that is a useful first-stop when yo
 ### Rough Sketch
 
 ![Rough Sketch](./spec_roughdraft.png)
+
+## HTML Devliverable
+
+This added the main meat of the html structure. I have it set up with just three pages for now, and index.html as the login, dashboard.html for the main content, and an about page. I added the neccesary content to this according to the rubric: incorporating html tags correctly, linking between these pages, etc. The about page has an image, and the links incorporate the linked site's favicon.
+
+I added placeholders for the elements that will require additional work from future elements. For example, the notbook exists but doesn't do anything without a database and web socket.
+
+I added a mostly fake login system, as well as a place to show the username on the main dashboard page and get back to the login if neccesary.
