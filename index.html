@@ -4,30 +4,36 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="login-page">
 
-  <h1>Login</h1>
+  <main class="login-content">
+    <h1>Login</h1>
 
-  <form action="dashboard.html" method="get">
+    <a href="https://github.com/grsouth/startup">My Repository</a>
+
+    <form action="dashboard.html" method="get">
+      <p>
+        <label for="username">Username:</label><br>
+        <input type="text" id="username" name="username">
+      </p>
+      <p>
+        <label for="password">Password:</label><br>
+        <input type="password" id="password" name="password">
+      </p>
+      <p>
+        <button type="submit">Login</button>
+      </p>
+    </form>
+  </main>
+
+  <footer class="site-footer">
+    <p>&copy; 2025 My Website</p>
     <p>
-      <label for="username">Username:</label><br>
-      <input type="text" id="username" name="username">
+      | <a href="about.html">About</a> | 
     </p>
-    <p>
-      <label for="password">Password:</label><br>
-      <input type="password" id="password" name="password">
-    </p>
-    <p>
-      <button type="submit">Login</button>
-    </p>
-  </form>
+  </footer>
 
 </body>
-<footer>
-  <p>&copy; 2025 My Website</p>
-  <p>
-    | <a href="about.html">About</a> | 
-  </p>
-</footer>
 </html>

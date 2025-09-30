@@ -3,25 +3,26 @@
 <head>
   <meta charset="utf-8">
   <title>My Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
   <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
-<body>
+<body class="dashboard-page">
 
-  <main>
-  <h1>My Dashboard</h1>
+  <main class="dashboard-main">
+    <h1>My Dashboard</h1>
     <a href="https://github.com/grsouth/startup">My Repository</a>
   </main>
 
-  <header>
+  <header class="dashboard-header">
     <p>Signed in as: <strong id="username">Guest</strong></p>
     <form action="index.html" method="get">
       <button type="submit" id="logoutBtn">Switch User</button>
     </form>
   </header>
 
-<h2>Quick Links</h2>
-<nav>
-  <ul>
+<h2 class="section-title">Quick Links</h2>
+<nav class="quick-links">
+  <ul class="quick-links-list">
     <li>
       <img src="https://github.com/favicon.ico" alt="" width="16" height="16">
       <a href="https://github.com/grsouth">Github</a>
@@ -50,20 +51,20 @@
 </nav>
 
 
-  <h2>Notebook</h2>
+  <h2 class="section-title">Notebook</h2>
    <p><i>(database data placeholder)</i></p>
   <textarea rows="6" cols="40"></textarea>
   <br>
   <input type="text" placeholder="Search">
   <button>Save</button>
 
-  <h2>Weather</h2>
+  <h2 class="section-title">Weather</h2>
   <p>[Weather Icon] <i>(placeholder for 3rd party service call)</i></p>
   <label>Location: <input type="text"></label><br>
   <label>Temp: <input type="text"></label><br>
   <label>AQI: <input type="text"></label>
 
-  <h2>TODO</h2>
+  <h2 class="section-title">TODO</h2>
   <p><i>(websocket/database data placeholder)</i></p>
   <ul>
     <li><input type="checkbox"> Pet dog</li>
@@ -73,10 +74,10 @@
   <input type="text" placeholder="New task">
   <button>Add</button>
 
-  <h2>Calendar</h2>
+  <h2 class="section-title">Calendar</h2>
   <p>[Calendar Placeholder]</p>
 
-  <h2>Agenda</h2>
+  <h2 class="section-title">Agenda</h2>
   <p><i>(websocket/database data placeholder)</i></p>
   <ul>
     <li>9/29 9:29: Extremely Important Thing</li>
@@ -84,14 +85,15 @@
     <li>9/29 9:29: Extremely Important Thing</li>
   </ul>
 
+  <footer class="site-footer">
+    <p>&copy; 2025 My Website</p>
+    <p>
+      | <a href="about.html">About</a> | 
+    </p>
+    <p>
+      | <a href="https://garrettsoutham.com">Back To Home</a> | 
+    </p>
+  </footer>
+
 </body>
-<footer>
-  <p>&copy; 2025 My Website</p>
-  <p>
-    | <a href="about.html">About</a> | 
-  </p>
-  <p>
-    | <a href="https://garrettsoutham.com">Back To Home</a> | 
-  </p>
-</footer>
 </html>
