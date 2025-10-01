@@ -82,8 +82,8 @@ body.dashboard-page {
   grid-template-columns: 260px minmax(320px, 1fr) minmax(240px, 320px);
   grid-template-areas:
     "quick notebook weather"
-    "calendar notebook todo"
-    "calendar agenda todo";
+    "agenda notebook todo"
+    "agenda calendar todo";
 }
 
 .dashboard-card {
@@ -104,6 +104,7 @@ body.dashboard-page {
 
 .notebook-card {
   grid-area: notebook;
+  align-self: start;
 }
 
 .weather-card {
@@ -188,7 +189,8 @@ body.dashboard-page {
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  min-height: 150px;
+  min-height: 260px;
+  min-width: 260px;
   border-radius: 12px;
   border: 1px dashed rgba(201, 209, 217, 0.3);
   background: rgba(8, 24, 46, 0.6);
@@ -244,7 +246,7 @@ button:focus {
       "quick quick"
       "notebook notebook"
       "weather todo"
-      "calendar agenda";
+      "agenda calendar";
   }
 
   .dashboard-user {
@@ -270,8 +272,8 @@ button:focus {
       "notebook"
       "weather"
       "todo"
-      "calendar"
-      "agenda";
+      "agenda"
+      "calendar";
   }
 
   .dashboard-user {
