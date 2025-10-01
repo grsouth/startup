@@ -158,11 +158,17 @@ body.dashboard-page {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
+  width: 100%;
 }
 
 .notebook-actions input,
 .todo-actions input {
-  flex: 1 1 180px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.todo-actions button {
+  flex: 0 0 auto;
 }
 
 .todo-card ul li {
