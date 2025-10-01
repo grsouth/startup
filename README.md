@@ -39,3 +39,7 @@ This added the main meat of the html structure. I have it set up with just three
 I added placeholders for the elements that will require additional work from future elements. For example, the notbook exists but doesn't do anything without a database and web socket.
 
 I added a mostly fake login system, as well as a place to show the username on the main dashboard page and get back to the login if neccesary.
+
+## CSS Deliverable
+
+I fleshed out my desired structure of the dashboard and made it kind of pretty. The elements of the dashboard are now organized into a nice responsive flex grid. The HTML was updated to give class attributes to all of the major elements. I was able to experiement with fonts and colors, including using google fonts. The dashboard elements now look like "tiles" in a grid, instead of a pure html list.
