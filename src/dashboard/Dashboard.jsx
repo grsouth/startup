@@ -1,105 +1,9 @@
-import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom';
-import './styles/base.css';
-import './login/login.css';
-import './dashboard/dashboard.css';
-import './about/about.css';
+import { Link, useNavigate } from 'react-router-dom';
+import { SiteFooter } from '../components/SiteFooter.jsx';
+import { useBodyClass } from '../hooks/useBodyClass.js';
+import './dashboard.css';
 
-function useBodyClass(className) {
-  useEffect(() => {
-    if (!className) {
-      return undefined;
-    }
-
-    document.body.classList.add(className);
-
-    return () => {
-      document.body.classList.remove(className);
-    };
-  }, [className]);
-}
-
-function SiteFooter({ children }) {
-  return (
-    <footer className="site-footer">
-      <p>&copy; 2025 My Website</p>
-      {children}
-    </footer>
-  );
-}
-
-function LoginPage() {
-  useBodyClass('login-page');
-  const navigate = useNavigate();
-
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    navigate('/dashboard');
-  };
-
-  return (
-    <>
-      <main className="login-content">
-        <h1>Login</h1>
-        <a href="https://github.com/grsouth/startup">My Repository</a>
-
-        <form onSubmit={handleSubmit}>
-          <p>
-            <label htmlFor="username">Username:</label>
-            <br />
-            <input type="text" id="username" name="username" />
-          </p>
-          <p>
-            <label htmlFor="password">Password:</label>
-            <br />
-            <input type="password" id="password" name="password" />
-          </p>
-          <p>
-            <button type="submit">Login</button>
-          </p>
-        </form>
-      </main>
-
-      <SiteFooter>
-        <p>
-          | <Link to="/about">About</Link> |
-        </p>
-      </SiteFooter>
-    </>
-  );
-}
-
-function AboutPage() {
-  useBodyClass('about-page');
-
-  return (
-    <>
-      <main className="about-content">
-        <h1>About This Website</h1>
-
-        <h2>Me</h2>
-        <p>I am Garrett, and the following is a picture of my dog.</p>
-
-        <img src="/fitzyPic.jpg" alt="Picture of my dog" width="300" />
-
-        <p>
-          Pretty cute right? <i>WRONG</i>. He stresses me out immensely.
-        </p>
-        <h2>Contact</h2>
-        <p>
-          If you’d like to reach me for some reason, my email is:{' '}
-          <a href="mailto:garrettsoutham@proton.me">garrettsoutham@proton.me</a>
-        </p>
-
-        <p>
-          <Link to="/">Back to Home</Link>
-        </p>
-      </main>
-    </>
-  );
-}
-
-function DashboardPage() {
+export function Dashboard() {
   useBodyClass('dashboard-page');
   const navigate = useNavigate();
 
@@ -234,18 +138,5 @@ function DashboardPage() {
         </p>
       </SiteFooter>
     </>
-  );
-}
-
-export default function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LoginPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
   );
 }

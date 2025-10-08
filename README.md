@@ -34,7 +34,7 @@ My goal is to create a personalized Homepage that is a useful first-stop when yo
 
 ## HTML Devliverable
 
-This added the main meat of the html structure. I have it set up with just three pages for now, and login.html as the login, dashboard.html for the main content, and an about page. I added the neccesary content to this according to the rubric: incorporating html tags correctly, linking between these pages, etc. The about page has an image, and the links incorporate the linked site's favicon.
+This added the main meat of the html structure. I have it set up with just three pages for now, and (originally) `login.html` as the login, `dashboard.html` for the main content, and an about page. I added the neccesary content to this according to the rubric: incorporating html tags correctly, linking between these pages, etc. The about page has an image, and the links incorporate the linked site's favicon.
 
 I added placeholders for the elements that will require additional work from future elements. For example, the notbook exists but doesn't do anything without a database and web socket.
 
@@ -47,3 +47,15 @@ I fleshed out my desired structure of the dashboard and made it kind of pretty. 
 ## React Prep 1
 
 Restructured the project into a React-friendly layout: static assets now live under `public/`, while page markup and styles are in `src/`. Hooked up React router for page navigation.
+
+## React Prep 2
+
+- Added a starter React shell and reorganized styling into `src/styles/base.css` plus page-specific CSS files for login, about, and dashboard views.
+
+## React Prep 3
+
+- Hooked up Vite/React rendering with `src/index.jsx`, rebuilt the router, and ported the previous static layouts into JSX so `npm run dev` now serves the full UI.
+
+## React Prep 4
+
+- Split the routed pages into dedicated `Login`, `Dashboard`, and `About` React components, shared a `SiteFooter`, and removed the legacy static HTML copies from `src/about`, `src/dashboard`, and `src/login`.
