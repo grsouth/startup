@@ -1,0 +1,21 @@
+.about-content {
+  width: min(100%, 720px);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 2.5rem 2rem;
+  border-radius: 18px;
+  border: 1px solid rgba(56, 139, 253, 0.18);
+  background: rgba(3, 17, 36, 0.88);
+  box-shadow: 0 10px 28px rgba(2, 9, 22, 0.45);
+  margin: 0 auto;
+}
+
+.about-content img {
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(2, 9, 22, 0.4);
+}
+
+.about-content a {
+  font-weight: 600;
+}

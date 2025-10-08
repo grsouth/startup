@@ -47,3 +47,7 @@ I fleshed out my desired structure of the dashboard and made it kind of pretty. 
 ## React Prep 1
 
 Restructured the project into a React-friendly layout: static assets now live under `public/`, while page markup and styles are in `src/` ahead of conversion to components. Added a root `index.html` that will host the future React bundle while the existing login experience lives at `public/login.html`.
+
+## React Prep 2
+
+- Added a starter `src/app.jsx` component and reorganized the styling into `src/styles/base.css` plus page-specific CSS files for login, about, and dashboard views.

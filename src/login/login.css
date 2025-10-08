@@ -1,0 +1,35 @@
+body.login-page {
+  align-items: center;
+  justify-content: center;
+}
+
+.login-content {
+  width: min(100%, 420px);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 2.5rem 2rem;
+  border-radius: 18px;
+  border: 1px solid rgba(56, 139, 253, 0.2);
+  background: rgba(3, 17, 36, 0.92);
+  box-shadow: 0 12px 32px rgba(2, 9, 22, 0.55);
+}
+
+.login-content form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.login-content label {
+  font-weight: 600;
+}
+
+.login-content button {
+  width: 100%;
+}
+
+.site-footer {
+  text-align: center;
+  margin-top: 1rem;
+}

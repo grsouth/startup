@@ -1,0 +1,207 @@
+body.dashboard-page {
+  gap: 1.5rem;
+}
+
+.dashboard-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem 2rem;
+  padding: 1.5rem 2rem;
+  border-radius: 16px;
+  border: 1px solid rgba(56, 139, 253, 0.25);
+  background: rgba(1, 10, 24, 0.9);
+  box-shadow: 0 16px 32px rgba(2, 9, 20, 0.45);
+}
+
+.dashboard-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dashboard-title a {
+  font-weight: 600;
+}
+
+.dashboard-user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.75rem;
+  text-align: right;
+}
+
+.dashboard-user form {
+  margin: 0;
+}
+
+.dashboard-main {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: 260px minmax(320px, 1fr) minmax(240px, 320px);
+  grid-template-areas:
+    "quick notebook weather"
+    "agenda notebook todo"
+    "agenda calendar todo";
+}
+
+.dashboard-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-radius: 16px;
+  border: 1px solid rgba(56, 139, 253, 0.2);
+  background: rgba(3, 17, 36, 0.85);
+  box-shadow: 0 12px 24px rgba(1, 9, 24, 0.35);
+  min-width: 0;
+}
+
+.quick-links-card {
+  grid-area: quick;
+}
+
+.notebook-card {
+  grid-area: notebook;
+  align-self: start;
+}
+
+.weather-card {
+  grid-area: weather;
+}
+
+.todo-card {
+  grid-area: todo;
+}
+
+.calendar-card {
+  grid-area: calendar;
+}
+
+.agenda-card {
+  grid-area: agenda;
+}
+
+.dashboard-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dashboard-card p {
+  margin: 0;
+}
+
+.quick-links-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+}
+
+.quick-links-list img {
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.notebook-card textarea {
+  width: 100%;
+  min-height: 180px;
+  resize: vertical;
+}
+
+.notebook-actions,
+.todo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.notebook-actions input,
+.todo-actions input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.todo-actions button {
+  flex: 0 0 auto;
+}
+
+.todo-card ul li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.agenda-card ul li {
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(56, 139, 253, 0.15);
+  background: rgba(8, 24, 46, 0.9);
+}
+
+.calendar-card p {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 260px;
+  min-width: 260px;
+  border-radius: 12px;
+  border: 1px dashed rgba(201, 209, 217, 0.3);
+  background: rgba(8, 24, 46, 0.6);
+  padding: 1rem;
+}
+
+.weather-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dashboard-card a {
+  font-weight: 600;
+}
+
+@media (max-width: 1100px) {
+  .dashboard-main {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "quick quick"
+      "notebook notebook"
+      "weather todo"
+      "agenda calendar";
+  }
+
+  .dashboard-user {
+    align-items: flex-start;
+    text-align: left;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-header,
+  .dashboard-card {
+    padding: 1.25rem;
+  }
+
+  .dashboard-main {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "quick"
+      "notebook"
+      "weather"
+      "todo"
+      "agenda"
+      "calendar";
+  }
+
+  .dashboard-user {
+    width: 100%;
+  }
+}
