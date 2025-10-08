@@ -34,7 +34,7 @@ My goal is to create a personalized Homepage that is a useful first-stop when yo
 
 ## HTML Devliverable
 
-This added the main meat of the html structure. I have it set up with just three pages for now, and index.html as the login, dashboard.html for the main content, and an about page. I added the neccesary content to this according to the rubric: incorporating html tags correctly, linking between these pages, etc. The about page has an image, and the links incorporate the linked site's favicon.
+This added the main meat of the html structure. I have it set up with just three pages for now, and login.html as the login, dashboard.html for the main content, and an about page. I added the neccesary content to this according to the rubric: incorporating html tags correctly, linking between these pages, etc. The about page has an image, and the links incorporate the linked site's favicon.
 
 I added placeholders for the elements that will require additional work from future elements. For example, the notbook exists but doesn't do anything without a database and web socket.
 
@@ -43,3 +43,7 @@ I added a mostly fake login system, as well as a place to show the username on t
 ## CSS Deliverable
 
 I fleshed out my desired structure of the dashboard and made it kind of pretty. The elements of the dashboard are now organized into a nice responsive flex grid. The HTML was updated to give class attributes to all of the major elements. I was able to experiement with fonts and colors, including using google fonts. The dashboard elements now look like "tiles" in a grid, instead of a pure html list.
+
+## React Prep 1
+
+Restructured the project into a React-friendly layout: static assets now live under `public/`, while page markup and styles are in `src/` ahead of conversion to components. Added a root `index.html` that will host the future React bundle while the existing login experience lives at `public/login.html`.
