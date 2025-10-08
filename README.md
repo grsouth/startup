@@ -46,16 +46,6 @@ I fleshed out my desired structure of the dashboard and made it kind of pretty. 
 
 ## React Prep 1
 
-Restructured the project into a React-friendly layout: static assets now live under `public/`, while page markup and styles are in `src/`. Hooked up React router for page navigation.
+Refactored the static HTML into a Vite/React project structure, with `index.html` in the root and all other assets in `src`. Converted the static HTML files into React components in `src/about`, `src/dashboard`, and `src/login`. Refactored the old single-file css into modular stylesheets. Added routing with React Router in `src/App.jsx` and a shared `SiteHeader` component. Changed the deployment script.
 
-## React Prep 2
-
-- Added a starter React shell and reorganized styling into `src/styles/base.css` plus page-specific CSS files for login, about, and dashboard views.
-
-## React Prep 3
-
-- Hooked up Vite/React rendering with `src/index.jsx`, rebuilt the router, and ported the previous static layouts into JSX so `npm run dev` now serves the full UI.
-
-## React Prep 4
-
-- Split the routed pages into dedicated `Login`, `Dashboard`, and `About` React components, shared a `SiteFooter`, and removed the legacy static HTML copies from `src/about`, `src/dashboard`, and `src/login`.
+At this point it's still static, but the bones are there. It's bundled up with vite, uses a react router, and the html and css have been ported over to react components.
