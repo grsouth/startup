@@ -65,13 +65,13 @@ export function Dashboard() {
           </nav>
         </section>
 
-        <Notebook />
-
         <Weather />
 
         <TodoList />
 
         <Calendar />
+
+        <Notebook />
       </main>
 
       <SiteFooter>

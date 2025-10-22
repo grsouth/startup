@@ -42,9 +42,9 @@ body.dashboard-page {
   gap: 1.5rem;
   grid-template-columns: 260px minmax(320px, 1fr) minmax(240px, 320px);
   grid-template-areas:
-    "quick notebook weather"
-    "quick notebook todo"
-    "calendar calendar todo";
+    "quick weather todo"
+    "calendar calendar todo"
+    "notebook notebook notebook";
 }
 
 .dashboard-card {
@@ -734,9 +734,9 @@ body.dashboard-page {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-areas:
       "quick quick"
-      "notebook notebook"
       "weather todo"
-      "calendar calendar";
+      "calendar calendar"
+      "notebook notebook";
   }
 
   .dashboard-user {
@@ -789,10 +789,10 @@ body.dashboard-page {
     grid-template-columns: 1fr;
     grid-template-areas:
       "quick"
-      "notebook"
       "weather"
       "todo"
-      "calendar";
+      "calendar"
+      "notebook";
   }
 
   .dashboard-user {
