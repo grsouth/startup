@@ -1,10 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { SiteFooter } from '../components/SiteFooter.jsx';
 import { useBodyClass } from '../hooks/useBodyClass.js';
-import { Notebook } from './components/Notebook.jsx';
-import { TodoList } from './components/TodoList.jsx';
+import { QuickLinks } from './components/QuickLinks.jsx';
 import { Weather } from './components/Weather.jsx';
+import { TodoList } from './components/TodoList.jsx';
 import { Calendar } from './components/Calendar.jsx';
+import { Notebook } from './components/Notebook.jsx';
 import './dashboard.css';
 
 export function Dashboard() {
@@ -33,44 +34,10 @@ export function Dashboard() {
       </header>
 
       <main className="dashboard-main">
-        <section className="dashboard-card quick-links-card">
-          <h2 className="section-title">Quick Links</h2>
-          <nav className="quick-links">
-            <ul className="quick-links-list">
-              <li>
-                <img src="https://github.com/favicon.ico" alt="" width="16" height="16" />
-                <a href="https://github.com/grsouth">Github</a>
-              </li>
-              <li>
-                <img src="http://jellyfin.local/favicon.ico" alt="" width="16" height="16" />
-                <a href="http://jellyfin.local">Jellyfin</a>
-              </li>
-              <li>
-                <img src="https://byu.instructure.com/favicon.ico" alt="" width="16" height="16" />
-                <a href="https://byu.instructure.com">Canvas</a>
-              </li>
-              <li>
-                <img src="https://aws.amazon.com/favicon.ico" alt="" width="16" height="16" />
-                <a href="https://aws.amazon.com">AWS</a>
-              </li>
-              <li>
-                <img src="https://mail.google.com/favicon.ico" alt="" width="16" height="16" />
-                <a href="https://mail.google.com">Gmail</a>
-              </li>
-              <li>
-                <img src="https://protonmail.com/favicon.ico" alt="" width="16" height="16" />
-                <a href="https://protonmail.com">Proton Mail</a>
-              </li>
-            </ul>
-          </nav>
-        </section>
-
+        <QuickLinks />
         <Weather />
-
         <TodoList />
-
         <Calendar />
-
         <Notebook />
       </main>
 
