@@ -179,6 +179,11 @@ export function QuickLinks() {
     }
   };
 
+  const handleIconError = (event) => {
+    event.currentTarget.src = '/favicon.ico';
+    event.currentTarget.onerror = null;
+  };
+
   return (
     <section className="dashboard-card quick-links-card">
       <div className="quick-links-header">
@@ -198,13 +203,13 @@ export function QuickLinks() {
       <nav className="quick-links">
         <ul className={`quick-links-list${isEditing ? ' quick-links-list--editing' : ''}`}>
           {links.map((link) => {
-            const iconSrc = getIconSrc(link);
+            const iconSrc = getIconSrc(link) || '/favicon.ico';
             const initial = linkInitials.get(link.id) ?? '#';
             return (
               <li key={link.id}>
                 <div className="quick-link-info">
                   {iconSrc ? (
-                    <img src={iconSrc} alt="" width="24" height="24" />
+                    <img src={iconSrc} alt="" width="24" height="24" onError={handleIconError} />
                   ) : (
                     <span className="quick-link-avatar" aria-hidden="true">
                       {initial}
