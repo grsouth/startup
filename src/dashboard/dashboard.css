@@ -65,7 +65,7 @@ body.dashboard-page {
 
 .notebook-card {
   grid-area: notebook;
-  align-self: start;
+  align-self: stretch;
 }
 
 .weather-card {
@@ -145,13 +145,6 @@ body.dashboard-page {
   flex-shrink: 0;
 }
 
-.notebook-card textarea {
-  width: 100%;
-  min-height: 180px;
-  resize: vertical;
-}
-
-.notebook-actions,
 .todo-actions {
   display: flex;
   flex-wrap: wrap;
@@ -159,7 +152,6 @@ body.dashboard-page {
   width: 100%;
 }
 
-.notebook-actions input,
 .todo-actions input {
   flex: 1 1 auto;
   min-width: 0;
@@ -167,6 +159,161 @@ body.dashboard-page {
 
 .todo-actions button {
   flex: 0 0 auto;
+}
+
+.notebook-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.notebook-subtitle {
+  margin-top: 0.25rem;
+  font-size: 0.9rem;
+  color: rgba(201, 209, 217, 0.75);
+}
+
+.notebook-status {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-align: right;
+  font-size: 0.85rem;
+  color: rgba(201, 209, 217, 0.75);
+}
+
+.notebook-save {
+  font-weight: 600;
+}
+
+.notebook-cloud {
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  background: rgba(56, 139, 253, 0.15);
+}
+
+.notebook-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.notebook-toolbar input {
+  flex: 1 1 220px;
+  min-width: 160px;
+}
+
+.notebook-toolbar button {
+  flex: 0 0 auto;
+}
+
+.notebook-body {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+  gap: 1.25rem;
+  min-height: 280px;
+}
+
+.notebook-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.notebook-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.notebook-list li {
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  border: 1px solid rgba(56, 139, 253, 0.15);
+  background: rgba(8, 24, 46, 0.6);
+  overflow: hidden;
+}
+
+.notebook-list-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding: 0.75rem 0.9rem;
+  width: 100%;
+  text-align: left;
+}
+
+.notebook-list-item.active {
+  border-left: 3px solid #388bfd;
+  background: rgba(56, 139, 253, 0.15);
+}
+
+.notebook-list-title {
+  font-weight: 600;
+}
+
+.notebook-list-meta {
+  font-size: 0.8rem;
+  color: rgba(201, 209, 217, 0.65);
+}
+
+.notebook-list-preview {
+  font-size: 0.83rem;
+  color: rgba(201, 209, 217, 0.7);
+}
+
+.notebook-list-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid rgba(56, 139, 253, 0.12);
+}
+
+.notebook-empty {
+  margin: 0;
+  padding: 0.75rem 0.5rem;
+  border-radius: 10px;
+  border: 1px dashed rgba(201, 209, 217, 0.35);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.notebook-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.notebook-title-input {
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding: 0.65rem 0.75rem;
+}
+
+.notebook-editor textarea {
+  width: 100%;
+  min-height: 220px;
+  resize: vertical;
+}
+
+.notebook-placeholder {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px dashed rgba(201, 209, 217, 0.35);
+  border-radius: 12px;
+  padding: 1.5rem;
+  color: rgba(201, 209, 217, 0.75);
+  text-align: center;
 }
 
 .todo-footer {
@@ -265,6 +412,14 @@ body.dashboard-page {
     align-items: flex-start;
     text-align: left;
   }
+
+  .notebook-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .notebook-status {
+    text-align: left;
+  }
 }
 
 @media (max-width: 640px) {
@@ -286,5 +441,13 @@ body.dashboard-page {
 
   .dashboard-user {
     width: 100%;
+  }
+
+  .notebook-body {
+    gap: 1rem;
+  }
+
+  .notebook-toolbar input {
+    flex: 1 1 100%;
   }
 }

@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { SiteFooter } from '../components/SiteFooter.jsx';
 import { useBodyClass } from '../hooks/useBodyClass.js';
+import { Notebook } from './components/Notebook.jsx';
 import { TodoList } from './components/TodoList.jsx';
 import './dashboard.css';
 
@@ -62,17 +63,7 @@ export function Dashboard() {
           </nav>
         </section>
 
-        <section className="dashboard-card notebook-card">
-          <h2 className="section-title">Notebook</h2>
-          <p>
-            <i>(database data placeholder)</i>
-          </p>
-          <textarea rows="6" cols="40" />
-          <div className="notebook-actions">
-            <input type="text" placeholder="Search" />
-            <button type="button">Save</button>
-          </div>
-        </section>
+        <Notebook />
 
         <section className="dashboard-card weather-card">
           <h2 className="section-title">Weather</h2>
