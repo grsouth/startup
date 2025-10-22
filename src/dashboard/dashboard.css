@@ -205,10 +205,6 @@ body.dashboard-page {
   min-width: 160px;
 }
 
-.notebook-toolbar button {
-  flex: 0 0 auto;
-}
-
 .notebook-body {
   display: grid;
   grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
@@ -314,6 +310,15 @@ body.dashboard-page {
   padding: 1.5rem;
   color: rgba(201, 209, 217, 0.75);
   text-align: center;
+}
+
+.notebook-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.notebook-editor-actions button {
+  margin-top: 0.5rem;
 }
 
 .todo-footer {

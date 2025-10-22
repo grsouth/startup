@@ -244,9 +244,6 @@ export function Notebook() {
           onChange={handleSearchChange}
           aria-label="Search notes"
         />
-        <button type="button" onClick={handleCreateNote}>
-          New note
-        </button>
       </div>
 
       <div className="notebook-body">
@@ -305,9 +302,15 @@ export function Notebook() {
             </>
           ) : (
             <div className="notebook-placeholder">
-              <p>Select a note on the left or create a new one to begin.</p>
+              <p>Select a note on the left or use Submit note to start a new entry.</p>
             </div>
           )}
+
+          <div className="notebook-editor-actions">
+            <button type="button" onClick={handleCreateNote}>
+              Submit note
+            </button>
+          </div>
         </div>
       </div>
     </section>
