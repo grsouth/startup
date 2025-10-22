@@ -76,6 +76,20 @@ body.dashboard-page {
   grid-area: todo;
 }
 
+.todo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.todo-count {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(201, 209, 217, 0.75);
+}
+
 .calendar-card {
   grid-area: calendar;
 }
@@ -95,6 +109,28 @@ body.dashboard-page {
 
 .dashboard-card p {
   margin: 0;
+}
+
+.todo-description {
+  font-size: 0.9rem;
+  color: rgba(201, 209, 217, 0.75);
+}
+
+.todo-status {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(56, 139, 253, 0.15);
+  font-size: 0.9rem;
+}
+
+.todo-empty {
+  margin: 0;
+  padding: 0.75rem 0.5rem;
+  border-radius: 8px;
+  border: 1px dashed rgba(201, 209, 217, 0.35);
+  text-align: center;
+  font-size: 0.9rem;
 }
 
 .quick-links-list li {
@@ -133,10 +169,57 @@ body.dashboard-page {
   flex: 0 0 auto;
 }
 
+.todo-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  color: rgba(201, 209, 217, 0.75);
+}
+
+.todo-saved-at {
+  font-style: italic;
+}
+
 .todo-card ul li {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(56, 139, 253, 0.15);
+  background: rgba(8, 24, 46, 0.6);
+}
+
+.todo-item label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  cursor: pointer;
+}
+
+.todo-item.completed span {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.todo-remove {
+  flex: 0 0 auto;
 }
 
 .agenda-card ul li {

@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { SiteFooter } from '../components/SiteFooter.jsx';
 import { useBodyClass } from '../hooks/useBodyClass.js';
+import { TodoList } from './components/TodoList.jsx';
 import './dashboard.css';
 
 export function Dashboard() {
@@ -89,27 +90,7 @@ export function Dashboard() {
           </label>
         </section>
 
-        <section className="dashboard-card todo-card">
-          <h2 className="section-title">TODO</h2>
-          <p>
-            <i>(websocket/database data placeholder)</i>
-          </p>
-          <ul>
-            <li>
-              <input type="checkbox" /> Pet dog
-            </li>
-            <li>
-              <input type="checkbox" /> Pet dog again
-            </li>
-            <li>
-              <input type="checkbox" /> Feed dog
-            </li>
-          </ul>
-          <div className="todo-actions">
-            <input type="text" placeholder="New task" />
-            <button type="button">Add</button>
-          </div>
-        </section>
+        <TodoList />
 
         <section className="dashboard-card agenda-card">
           <h2 className="section-title">Agenda</h2>
