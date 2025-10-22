@@ -41,11 +41,27 @@ const MOCK_WEATHER = {
   }
 };
 
-const defaultLocation = 'Provo, UT';
+const DEFAULT_LOCATION = 'Provo, UT';
+const DEFAULT_COORDINATES = { lat: 40.2338, lon: -111.6585 };
+const MOCK_USER_COORDINATES = { lat: 47.6062, lon: -122.3321 };
+
+function getMockLocationFromCoords(coords) {
+  if (!coords) {
+    return DEFAULT_LOCATION;
+  }
+
+  const { lat, lon } = coords;
+  if (lat > 45) {
+    return 'Seattle, WA';
+  }
+  if (lat < 35 && lon < -100) {
+    return 'Phoenix, AZ';
+  }
+  return DEFAULT_LOCATION;
+}
 
 function getMockWeather(location) {
-  const trimmed = location.trim();
-  const key = trimmed ? trimmed.replace(/\s+/g, ' ') : defaultLocation;
+  const key = location || DEFAULT_LOCATION;
   const now = new Date();
   const base = MOCK_WEATHER[key] ?? {
     condition: 'Clear',
@@ -67,12 +83,11 @@ function getMockWeather(location) {
 }
 
 export function Weather() {
-  const [location, setLocation] = useState(defaultLocation);
-  const [forecast, setForecast] = useState(() => getMockWeather(defaultLocation));
-  const [savedLocations, setSavedLocations] = useState([defaultLocation]);
+  const [location, setLocation] = useState(DEFAULT_LOCATION);
+  const [forecast, setForecast] = useState(() => getMockWeather(DEFAULT_LOCATION));
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [coordinates, setCoordinates] = useState(DEFAULT_COORDINATES);
   const requestRef = useRef(0);
   const statusTimerRef = useRef();
 
@@ -81,6 +96,16 @@ export function Weather() {
       if (statusTimerRef.current) {
         clearTimeout(statusTimerRef.current);
       }
+    };
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCoordinates(MOCK_USER_COORDINATES);
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
     };
   }, []);
 
@@ -94,14 +119,12 @@ export function Weather() {
         return;
       }
       const parsed = JSON.parse(stored);
-      if (parsed?.location) {
-        setLocation(parsed.location);
-      }
-      if (parsed?.forecast) {
+      if (parsed?.forecast && parsed.forecast.location) {
         setForecast(parsed.forecast);
+        setLocation(parsed.forecast.location);
       }
-      if (Array.isArray(parsed?.savedLocations) && parsed.savedLocations.length > 0) {
-        setSavedLocations(parsed.savedLocations);
+      if (parsed?.coordinates) {
+        setCoordinates(parsed.coordinates);
       }
     } catch (error) {
       console.warn('Unable to load weather preferences', error);
@@ -115,14 +138,14 @@ export function Weather() {
     const payload = {
       location,
       forecast,
-      savedLocations
+      coordinates
     };
     try {
       window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(payload));
     } catch (error) {
       console.warn('Unable to save weather preferences', error);
     }
-  }, [forecast, location, savedLocations]);
+  }, [coordinates, forecast, location]);
 
   const feelsLikeText = useMemo(() => {
     if (!forecast) {
@@ -149,22 +172,16 @@ export function Weather() {
     }, 4000);
   };
 
-  const fetchForecast = async (requestedLocation) => {
-    const trimmed = requestedLocation.trim();
-    if (!trimmed) {
-      setErrorMessage('Enter a location to check the weather.');
-      return;
-    }
-
-    setErrorMessage('');
+  const fetchForecast = async (effectiveLocation) => {
     setIsLoading(true);
     const requestId = Date.now();
     requestRef.current = requestId;
 
     await new Promise((resolve) => setTimeout(resolve, 850));
-    const data = getMockWeather(trimmed);
+    const data = getMockWeather(effectiveLocation);
 
     if (requestRef.current !== requestId) {
+      setIsLoading(false);
       return;
     }
 
@@ -174,42 +191,26 @@ export function Weather() {
     updateStatus(`Updated at ${new Date(data.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
   };
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    fetchForecast(location);
-  };
+  useEffect(() => {
+    let canceled = false;
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      if (canceled) {
+        return;
+      }
+      const coords = coordinates ?? DEFAULT_COORDINATES;
+      const derivedLocation = getMockLocationFromCoords(coords);
+      setLocation(derivedLocation);
+      setForecast(getMockWeather(derivedLocation));
+      setIsLoading(false);
+      updateStatus('Detected location automatically.');
+    }, 650);
 
-  const handleLocationChange = (event) => {
-    setLocation(event.target.value);
-  };
-
-  const handleSelectSaved = (event) => {
-    const value = event.target.value;
-    if (!value) {
-      return;
-    }
-    setLocation(value);
-    fetchForecast(value);
-  };
-
-  const handleSaveLocation = () => {
-    const trimmed = location.trim();
-    if (!trimmed) {
-      setErrorMessage('Enter a location before saving.');
-      return;
-    }
-    if (savedLocations.includes(trimmed)) {
-      updateStatus('Location already saved.');
-      return;
-    }
-    setSavedLocations((previous) => [...previous, trimmed]);
-    updateStatus('Saved location.');
-  };
-
-  const handleRemoveLocation = (target) => {
-    setSavedLocations((previous) => previous.filter((loc) => loc !== target));
-    updateStatus('Removed saved location.');
-  };
+    return () => {
+      canceled = true;
+      clearTimeout(timer);
+    };
+  }, [coordinates]);
 
   return (
     <section className="dashboard-card weather-card">
@@ -227,27 +228,15 @@ export function Weather() {
         </div>
       </header>
 
-      <form className="weather-search" onSubmit={handleSubmit}>
+      <div className="weather-search">
         <label>
-          <span>Location</span>
-          <input
-            type="text"
-            value={location}
-            onChange={handleLocationChange}
-            placeholder="City, State"
-            aria-label="Location"
-            disabled={isLoading}
-          />
+          <span>Current location</span>
+          <input type="text" value={location} readOnly aria-label="Current location" />
         </label>
-        <button type="submit" disabled={isLoading}>
+        <button type="button" onClick={() => fetchForecast(location)} disabled={isLoading}>
           {isLoading ? 'Fetching...' : 'Refresh'}
         </button>
-        <button type="button" onClick={handleSaveLocation} disabled={!location.trim()}>
-          Save
-        </button>
-      </form>
-
-      {errorMessage ? <p className="weather-error">{errorMessage}</p> : null}
+      </div>
 
       {forecast ? (
         <div className="weather-content">
@@ -290,30 +279,6 @@ export function Weather() {
       ) : (
         <p className="weather-empty">No weather data yet. Refresh to load conditions.</p>
       )}
-
-      {savedLocations.length > 0 ? (
-        <aside className="weather-saved">
-          <label htmlFor="savedLocations">Saved locations</label>
-          <select id="savedLocations" onChange={handleSelectSaved} value="">
-            <option value="">Select saved location</option>
-            {savedLocations.map((saved) => (
-              <option key={saved} value={saved}>
-                {saved}
-              </option>
-            ))}
-          </select>
-          <ul>
-            {savedLocations.map((saved) => (
-              <li key={saved}>
-                <span>{saved}</span>
-                <button type="button" onClick={() => handleRemoveLocation(saved)}>
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
-        </aside>
-      ) : null}
     </section>
   );
 }
