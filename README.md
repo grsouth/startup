@@ -49,3 +49,7 @@ I fleshed out my desired structure of the dashboard and made it kind of pretty. 
 Refactored the static HTML into a Vite/React project structure, with `index.html` in the root and all other assets in `src`. Converted the static HTML files into React components in `src/about`, `src/dashboard`, and `src/login`. Refactored the old single-file css into modular stylesheets. Added routing with React Router in `src/App.jsx` and a shared `SiteHeader` component. Changed the deployment script.
 
 At this point it's still static, but the bones are there. It's bundled up with vite, uses a react router, and the html and css have been ported over to react components.
+
+## React Part 2
+
+We rebuilt the dashboard to run entirely on React and added interactive JavaScript for all the widgets. Quick links now run through a React component that lets you edit, add, and delete links. The weather card auto-detects a location, fetches mocked data, and shows a refresh button. The todo list, notebook, and calendar all manage state with useState/useEffect, saving data locally and providing updates 
