@@ -4,6 +4,7 @@ import { useBodyClass } from '../hooks/useBodyClass.js';
 import { Notebook } from './components/Notebook.jsx';
 import { TodoList } from './components/TodoList.jsx';
 import { Weather } from './components/Weather.jsx';
+import { Calendar } from './components/Calendar.jsx';
 import './dashboard.css';
 
 export function Dashboard() {
@@ -70,10 +71,7 @@ export function Dashboard() {
 
         <TodoList />
 
-        <section className="dashboard-card calendar-card">
-          <h2 className="section-title">Calendar</h2>
-          <p>[Calendar Placeholder]</p>
-        </section>
+        <Calendar />
       </main>
 
       <SiteFooter>

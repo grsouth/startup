@@ -243,6 +243,212 @@ body.dashboard-page {
   grid-area: calendar;
 }
 
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.calendar-subtitle {
+  margin-top: 0.15rem;
+  font-size: 0.9rem;
+  color: rgba(201, 209, 217, 0.75);
+}
+
+.calendar-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 600;
+}
+
+.calendar-controls button {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.calendar-status {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(56, 139, 253, 0.15);
+  font-size: 0.9rem;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.calendar-weekday {
+  text-align: center;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(201, 209, 217, 0.65);
+  padding-bottom: 0.25rem;
+}
+
+.calendar-day {
+  border-radius: 10px;
+  padding: 0.6rem 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+  border: 1px solid rgba(56, 139, 253, 0.12);
+  background: rgba(10, 26, 48, 0.6);
+  transition: background 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+  text-align: left;
+}
+
+.calendar-day:hover {
+  border-color: rgba(56, 139, 253, 0.4);
+}
+
+.calendar-day:focus-visible {
+  outline: 2px solid rgba(56, 139, 253, 0.7);
+  outline-offset: 2px;
+}
+
+.calendar-day--faded {
+  opacity: 0.45;
+}
+
+.calendar-day--today {
+  border-color: rgba(56, 139, 253, 0.35);
+}
+
+.calendar-day--selected {
+  background: rgba(56, 139, 253, 0.18);
+  border-color: rgba(56, 139, 253, 0.5);
+}
+
+.calendar-day-number {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.calendar-day-dot {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(56, 139, 253, 0.25);
+  align-self: flex-end;
+}
+
+.calendar-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(56, 139, 253, 0.15);
+  background: rgba(8, 24, 46, 0.55);
+}
+
+.calendar-form h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.calendar-form-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.calendar-form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.calendar-form-grid input,
+.calendar-form-grid textarea {
+  width: 100%;
+}
+
+.calendar-notes {
+  grid-column: 1 / -1;
+}
+
+.calendar-form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.calendar-events {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.calendar-events h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.calendar-events-empty {
+  margin: 0;
+  padding: 0.75rem 0.5rem;
+  border-radius: 8px;
+  border: 1px dashed rgba(201, 209, 217, 0.3);
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.calendar-events ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.calendar-events li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid rgba(56, 139, 253, 0.15);
+  background: rgba(8, 24, 46, 0.6);
+}
+
+.calendar-event-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.calendar-event-title {
+  font-weight: 600;
+}
+
+.calendar-event-time {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(201, 209, 217, 0.75);
+}
+
+.calendar-event-notes {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(201, 209, 217, 0.8);
+}
+
 .dashboard-card ul {
   list-style: none;
   padding: 0;
@@ -519,18 +725,6 @@ body.dashboard-page {
   flex: 0 0 auto;
 }
 
-.calendar-card p {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 260px;
-  min-width: 260px;
-  border-radius: 12px;
-  border: 1px dashed rgba(201, 209, 217, 0.3);
-  background: rgba(8, 24, 46, 0.6);
-  padding: 1rem;
-}
-
 .dashboard-card a {
   font-weight: 600;
 }
@@ -556,6 +750,14 @@ body.dashboard-page {
 
   .notebook-status {
     text-align: left;
+  }
+
+  .calendar-grid {
+    gap: 0.4rem;
+  }
+
+  .calendar-form {
+    padding: 0.85rem;
   }
 
   .weather-header {
@@ -603,6 +805,23 @@ body.dashboard-page {
 
   .notebook-toolbar input {
     flex: 1 1 100%;
+  }
+
+  .calendar-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .calendar-grid {
+    gap: 0.35rem;
+  }
+
+  .calendar-day {
+    padding: 0.5rem 0.35rem;
+  }
+
+  .calendar-form-grid {
+    grid-template-columns: 1fr;
   }
 
 }
