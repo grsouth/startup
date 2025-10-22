@@ -70,18 +70,6 @@ export function Dashboard() {
 
         <TodoList />
 
-        <section className="dashboard-card agenda-card">
-          <h2 className="section-title">Agenda</h2>
-          <p>
-            <i>(websocket/database data placeholder)</i>
-          </p>
-          <ul>
-            <li>9/29 9:29: Extremely Important Thing</li>
-            <li>9/29 9:29: Extremely Important Thing</li>
-            <li>9/29 9:29: Extremely Important Thing</li>
-          </ul>
-        </section>
-
         <section className="dashboard-card calendar-card">
           <h2 className="section-title">Calendar</h2>
           <p>[Calendar Placeholder]</p>
