@@ -3,6 +3,7 @@ import { SiteFooter } from '../components/SiteFooter.jsx';
 import { useBodyClass } from '../hooks/useBodyClass.js';
 import { Notebook } from './components/Notebook.jsx';
 import { TodoList } from './components/TodoList.jsx';
+import { Weather } from './components/Weather.jsx';
 import './dashboard.css';
 
 export function Dashboard() {
@@ -65,21 +66,7 @@ export function Dashboard() {
 
         <Notebook />
 
-        <section className="dashboard-card weather-card">
-          <h2 className="section-title">Weather</h2>
-          <p>
-            [Weather Icon] <i>(placeholder for 3rd party service call)</i>
-          </p>
-          <label>
-            Location: <input type="text" />
-          </label>
-          <label>
-            Temp: <input type="text" />
-          </label>
-          <label>
-            AQI: <input type="text" />
-          </label>
-        </section>
+        <Weather />
 
         <TodoList />
 
