@@ -9,6 +9,7 @@ const linksRouter = require('./routes/links');
 const todosRouter = require('./routes/todos');
 const notesRouter = require('./routes/notes');
 const eventsRouter = require('./routes/events');
+const weatherRouter = require('./routes/weather');
 
 const DEFAULT_PORT = 4000;
 
@@ -26,6 +27,7 @@ function createApp() {
   app.use('/api', todosRouter);
   app.use('/api', notesRouter);
   app.use('/api', eventsRouter);
+  app.use('/api', weatherRouter);
 
   app.get('/api/health', (_req, res) => {
     res.json(
