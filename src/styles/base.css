@@ -100,3 +100,12 @@ button:focus {
   margin: 1rem 0 0;
   color: rgba(201, 209, 217, 0.7);
 }
+
+.page-status {
+  display: grid;
+  place-items: center;
+  min-height: 50vh;
+  text-align: center;
+  gap: 0.75rem;
+  padding: 2rem;
+}

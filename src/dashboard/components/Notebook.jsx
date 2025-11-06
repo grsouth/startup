@@ -1,77 +1,82 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-
-const LOCAL_STORAGE_KEY = 'dashboard.notebook.v1';
-
-const createNote = (overrides = {}) => {
-  const id =
-    typeof crypto !== 'undefined' && crypto.randomUUID
-      ? crypto.randomUUID()
-      : `note-${Date.now()}-${Math.random()}`;
-  const timestamp = new Date().toISOString();
-  return {
-    id,
-    title: 'Untitled note',
-    content: '',
-    updatedAt: timestamp,
-    ...overrides
-  };
-};
-
-const seedNotes = [
-  createNote({
-    title: 'Project kickoff checklist',
-    content: '- Confirm scope with stakeholders\n- Draft architecture sketch\n- Schedule design review\n- Identify blockers to escalate',
-    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString()
-  }),
-  createNote({
-    title: 'Ideas to explore',
-    content: '- Evaluate React Query for data fetching\n- Revisit CI pipeline flakiness\n- Draft blog post on dashboard UX learnings',
-    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString()
-  }),
-  createNote({
-    title: 'Personal reminders',
-    content: '1. Order new dog toys\n2. Back up home server configs\n3. Schedule annual check-up',
-    updatedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString()
-  })
-];
+import { apiClient } from '../../services/apiClient.js';
 
 const sortNotes = (notes) =>
-  [...notes].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  [...notes].sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  );
 
 export function Notebook() {
-  const isBrowser = typeof window !== 'undefined';
-  const [notes, setNotes] = useState(() => {
-    if (!isBrowser) {
-      return sortNotes(seedNotes);
-    }
-    try {
-      const stored = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (!stored) {
-        return sortNotes(seedNotes);
-      }
-      const parsed = JSON.parse(stored);
-      if (!Array.isArray(parsed)) {
-        return sortNotes(seedNotes);
-      }
-      return sortNotes(
-        parsed.map((note) => ({
-          ...note,
-          updatedAt: note.updatedAt ?? new Date().toISOString()
-        }))
-      );
-    } catch (error) {
-      console.warn('Unable to load notebook data from storage', error);
-      return sortNotes(seedNotes);
-    }
-  });
-  const [selectedNoteId, setSelectedNoteId] = useState(() => notes[0]?.id ?? null);
+  const [notes, setNotes] = useState([]);
+  const [selectedNoteId, setSelectedNoteId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusMessage, setStatusMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState(null);
-  const [cloudStatus, setCloudStatus] = useState('');
+
+  const pendingUpdatesRef = useRef(new Map());
   const saveTimerRef = useRef();
   const statusTimerRef = useRef();
-  const cloudIntervalRef = useRef();
+
+  useEffect(() => {
+    let canceled = false;
+    const load = async () => {
+      setIsLoading(true);
+      setErrorMessage('');
+      try {
+        const data = await apiClient.get('/api/notes');
+        if (!canceled) {
+          const sorted = Array.isArray(data) ? sortNotes(data) : [];
+          setNotes(sorted);
+          setSelectedNoteId(sorted[0]?.id ?? null);
+        }
+      } catch (error) {
+        if (!canceled) {
+          setErrorMessage(error.message || 'Unable to load notes.');
+        }
+      } finally {
+        if (!canceled) {
+          setIsLoading(false);
+        }
+      }
+    };
+    load();
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!statusMessage) {
+      return undefined;
+    }
+    statusTimerRef.current = setTimeout(() => {
+      setStatusMessage('');
+      statusTimerRef.current = undefined;
+    }, 3500);
+    return () => {
+      if (statusTimerRef.current) {
+        clearTimeout(statusTimerRef.current);
+        statusTimerRef.current = undefined;
+      }
+    };
+  }, [statusMessage]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = undefined;
+      }
+      pendingUpdatesRef.current.clear();
+      if (statusTimerRef.current) {
+        clearTimeout(statusTimerRef.current);
+        statusTimerRef.current = undefined;
+      }
+    };
+  }, []);
 
   const selectedNote = useMemo(
     () => notes.find((note) => note.id === selectedNoteId) ?? null,
@@ -84,141 +89,126 @@ export function Notebook() {
       return notes;
     }
     return notes.filter((note) => {
-      const titleMatch = note.title.toLowerCase().includes(trimmed);
-      const contentMatch = note.content.toLowerCase().includes(trimmed);
-      return titleMatch || contentMatch;
+      const titleMatch = note.title?.toLowerCase().includes(trimmed);
+      const bodyMatch = note.body?.toLowerCase().includes(trimmed);
+      return titleMatch || bodyMatch;
     });
   }, [notes, searchQuery]);
 
   useEffect(() => {
     if (filteredNotes.length === 0) {
-      if (searchQuery.trim() && selectedNoteId !== null) {
-        setSelectedNoteId(null);
-      }
+      setSelectedNoteId(null);
       return;
     }
     if (!filteredNotes.some((note) => note.id === selectedNoteId)) {
       setSelectedNoteId(filteredNotes[0].id);
     }
-  }, [filteredNotes, searchQuery, selectedNoteId]);
+  }, [filteredNotes, selectedNoteId]);
 
-  useEffect(() => {
-    return () => {
-      if (saveTimerRef.current) {
-        clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = undefined;
-      }
-      if (statusTimerRef.current) {
-        clearTimeout(statusTimerRef.current);
-        statusTimerRef.current = undefined;
-      }
-      if (cloudIntervalRef.current) {
-        clearInterval(cloudIntervalRef.current);
-        cloudIntervalRef.current = undefined;
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isBrowser) {
-      return;
-    }
+  const scheduleSave = () => {
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
     }
-    setIsSaving(true);
-    saveTimerRef.current = window.setTimeout(() => {
-      window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(notes));
-      setIsSaving(false);
-      setLastSavedAt(new Date());
+    saveTimerRef.current = setTimeout(async () => {
+      const entries = Array.from(pendingUpdatesRef.current.entries());
+      if (entries.length === 0) {
+        return;
+      }
+      pendingUpdatesRef.current.clear();
       saveTimerRef.current = undefined;
+      setIsSaving(true);
+      setErrorMessage('');
+      try {
+        const updates = await Promise.all(
+          entries.map(async ([noteId, payload]) => {
+            const updated = await apiClient.put(`/api/notes/${noteId}`, payload);
+            return updated;
+          })
+        );
+        setNotes((previous) =>
+          sortNotes(
+            previous.map((note) => {
+              const update = updates.find((item) => item.id === note.id);
+              return update ? update : note;
+            })
+          )
+        );
+        setLastSavedAt(new Date());
+        setStatusMessage('All changes saved');
+      } catch (error) {
+        setErrorMessage(error.message || 'Unable to save note.');
+      } finally {
+        setIsSaving(false);
+      }
     }, 600);
-  }, [isBrowser, notes]);
-
-  useEffect(() => {
-    if (!isBrowser) {
-      return undefined;
-    }
-    cloudIntervalRef.current = window.setInterval(() => {
-      const timestamp = new Date();
-      setCloudStatus(`Cloud backup completed at ${timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
-      if (statusTimerRef.current) {
-        clearTimeout(statusTimerRef.current);
-      }
-      statusTimerRef.current = window.setTimeout(() => {
-        setCloudStatus('');
-        statusTimerRef.current = undefined;
-      }, 5000);
-    }, 90000);
-
-    return () => {
-      if (cloudIntervalRef.current) {
-        clearInterval(cloudIntervalRef.current);
-        cloudIntervalRef.current = undefined;
-      }
-    };
-  }, [isBrowser]);
-
-  const handleCreateNote = () => {
-    const newNote = createNote({
-      title: `New note ${notes.length + 1}`,
-      content: ''
-    });
-    setNotes((previous) => sortNotes([newNote, ...previous]));
-    setSelectedNoteId(newNote.id);
-    if (searchQuery) {
-      setSearchQuery('');
-    }
   };
 
-  const updateNote = (noteId, updates) => {
+  const queueUpdate = (noteId, updates) => {
+    const pending = pendingUpdatesRef.current.get(noteId) ?? {};
+    pendingUpdatesRef.current.set(noteId, { ...pending, ...updates });
+    scheduleSave();
+  };
+
+  const applyNoteUpdates = (noteId, updates) => {
+    const timestamp = new Date().toISOString();
     setNotes((previous) =>
       sortNotes(
         previous.map((note) =>
-          note.id === noteId
-            ? {
-                ...note,
-                ...updates,
-                updatedAt: new Date().toISOString()
-              }
-            : note
+          note.id === noteId ? { ...note, ...updates, updatedAt: timestamp } : note
         )
       )
     );
+    queueUpdate(noteId, updates);
   };
 
-  const handleDeleteNote = (noteId) => {
-    setNotes((previous) => {
-      const updated = sortNotes(previous.filter((note) => note.id !== noteId));
-      if (selectedNoteId === noteId) {
-        setSelectedNoteId(updated[0]?.id ?? null);
-      }
-      return updated;
-    });
+  const handleCreateNote = async () => {
+    setErrorMessage('');
+    try {
+      const created = await apiClient.post('/api/notes', {
+        title: `New note ${notes.length + 1}`,
+        body: ''
+      });
+      setNotes((previous) => sortNotes([created, ...previous]));
+      setSelectedNoteId(created.id);
+      setStatusMessage('Note created');
+    } catch (error) {
+      setErrorMessage(error.message || 'Unable to create note.');
+    }
+  };
+
+  const handleDeleteNote = async (noteId) => {
+    const existing = notes.find((note) => note.id === noteId);
+    if (!existing) {
+      return;
+    }
+
+    setNotes((previous) => previous.filter((note) => note.id !== noteId));
+    if (selectedNoteId === noteId) {
+      const remaining = notes.filter((note) => note.id !== noteId);
+      setSelectedNoteId(remaining[0]?.id ?? null);
+    }
+
+    try {
+      await apiClient.delete(`/api/notes/${noteId}`);
+      setStatusMessage('Note deleted');
+    } catch (error) {
+      setErrorMessage(error.message || 'Unable to delete note.');
+      setNotes((previous) => sortNotes([...previous, existing]));
+    }
   };
 
   const handleTitleChange = (event) => {
-    const value = event.target.value;
     if (!selectedNote) {
       return;
     }
-    updateNote(selectedNote.id, { title: value });
+    applyNoteUpdates(selectedNote.id, { title: event.target.value });
   };
 
-  const handleContentChange = (event) => {
-    const value = event.target.value;
+  const handleBodyChange = (event) => {
     if (!selectedNote) {
       return;
     }
-    updateNote(selectedNote.id, { content: value });
-  };
-
-  const handleSearchChange = (event) => {
-    setSearchQuery(event.target.value);
-  };
-
-  const handleSelectNote = (noteId) => {
-    setSelectedNoteId(noteId);
+    applyNoteUpdates(selectedNote.id, { body: event.target.value });
   };
 
   return (
@@ -226,13 +216,21 @@ export function Notebook() {
       <header className="notebook-header">
         <div>
           <h2 className="section-title">Notebook</h2>
-          <p className="notebook-subtitle">Capture quick thoughts and keep them synced on this device.</p>
+          <p className="notebook-subtitle">Capture ideas and sync them securely.</p>
         </div>
         <div className="notebook-status">
-          <span className="notebook-save">
-            {isSaving ? 'Saving...' : lastSavedAt ? `Saved ${lastSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Autosave enabled'}
-          </span>
-          {cloudStatus ? <span className="notebook-cloud">{cloudStatus}</span> : null}
+          {isSaving ? (
+            <span className="notebook-cloud" role="status">
+              Saving…
+            </span>
+          ) : lastSavedAt ? (
+            <span className="notebook-save">
+              Saved {lastSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          ) : (
+            <span className="notebook-save">Awaiting changes</span>
+          )}
+          {statusMessage ? <span>{statusMessage}</span> : null}
         </div>
       </header>
 
@@ -241,77 +239,91 @@ export function Notebook() {
           type="search"
           placeholder="Search notes"
           value={searchQuery}
-          onChange={handleSearchChange}
-          aria-label="Search notes"
+          onChange={(event) => setSearchQuery(event.target.value)}
         />
+        <button type="button" onClick={handleCreateNote}>
+          New note
+        </button>
       </div>
 
+      {errorMessage ? (
+        <p className="notebook-error" role="alert">
+          {errorMessage}
+        </p>
+      ) : null}
+
+      {isLoading ? (
+        <p className="notebook-loading" role="status">
+          Loading notes…
+        </p>
+      ) : null}
+
       <div className="notebook-body">
-        <aside className="notebook-list" aria-label="Notebook entries">
+        <aside className="notebook-list">
+          <h3>Notes</h3>
           {filteredNotes.length === 0 ? (
-            <p className="notebook-empty">No notes match that search. Create a new one?</p>
+            <p className="notebook-empty">No notes found.</p>
           ) : (
             <ul>
               {filteredNotes.map((note) => (
                 <li key={note.id}>
                   <button
                     type="button"
-                    className={`notebook-list-item${note.id === selectedNoteId ? ' active' : ''}`}
-                    onClick={() => handleSelectNote(note.id)}
+                    className={`notebook-list-item${
+                      note.id === selectedNoteId ? ' active' : ''
+                    }`}
+                    onClick={() => setSelectedNoteId(note.id)}
                   >
-                    <span className="notebook-list-title">{note.title || 'Untitled note'}</span>
-                    <span className="notebook-list-meta">
-                      {new Date(note.updatedAt).toLocaleString([], {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                    <span className="notebook-list-title">
+                      {note.title || 'Untitled'}
                     </span>
-                    <span className="notebook-list-preview">{note.content ? note.content.slice(0, 80) : 'Start typing to add content...'}</span>
+                    <span className="notebook-list-meta">
+                      {new Date(note.updatedAt).toLocaleString()}
+                    </span>
+                    <span className="notebook-list-preview">
+                      {note.body?.slice(0, 100) || 'No content yet.'}
+                    </span>
                   </button>
-                  <div className="notebook-list-actions">
-                    <button type="button" onClick={() => handleDeleteNote(note.id)}>
-                      Delete
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    className="notebook-delete"
+                    onClick={() => handleDeleteNote(note.id)}
+                    aria-label={`Delete ${note.title || 'untitled note'}`}
+                  >
+                    Delete
+                  </button>
                 </li>
               ))}
             </ul>
           )}
         </aside>
 
-        <div className="notebook-editor">
+        <section className="notebook-editor">
           {selectedNote ? (
             <>
-              <input
-                type="text"
-                className="notebook-title-input"
-                value={selectedNote.title}
-                onChange={handleTitleChange}
-                placeholder="Note title"
-                aria-label="Note title"
-              />
-              <textarea
-                value={selectedNote.content}
-                onChange={handleContentChange}
-                rows="12"
-                placeholder="Start writing your note here..."
-                aria-label="Note body"
-              />
+              <label className="notebook-editor-field">
+                Title
+                <input
+                  type="text"
+                  value={selectedNote.title}
+                  onChange={handleTitleChange}
+                />
+              </label>
+              <label className="notebook-editor-field notebook-editor-body">
+                Body
+                <textarea
+                  value={selectedNote.body}
+                  onChange={handleBodyChange}
+                  rows={12}
+                />
+              </label>
             </>
           ) : (
-            <div className="notebook-placeholder">
-              <p>Select a note on the left or use Submit note to start a new entry.</p>
-            </div>
+            <p className="notebook-placeholder">
+              Select a note or create a new one to start writing.
+            </p>
           )}
-
-          <div className="notebook-editor-actions">
-            <button type="button" onClick={handleCreateNote}>
-              Submit note
-            </button>
-          </div>
-        </div>
+        </section>
       </div>
     </section>
   );

@@ -54,6 +54,9 @@ router.get('/weather', async (req, res, next) => {
       'temperature_2m,apparent_temperature,weather_code,precipitation_probability'
     );
     url.searchParams.set('timezone', 'auto');
+    url.searchParams.set('temperature_unit', 'fahrenheit');
+    url.searchParams.set('windspeed_unit', 'mph');
+    url.searchParams.set('precipitation_unit', 'inch');
 
     const response = await fetch(url.toString(), {
       headers: {

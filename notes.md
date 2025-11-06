@@ -48,6 +48,31 @@
 
 ---
 
+## Service & Auth
+
+* Sessions with Express cookies: set `httpOnly`, `sameSite: 'lax'`, and toggle `secure` in production.
+* Hash passwords with `bcryptjs` (`genSalt` + `hash`) and compare with `compare`.
+* Keep auth middleware tiny: look up `sid`, hydrate `req.user`, and short-circuit 401 when invalid.
+
+```js
+app.post('/api/auth/login', async (req, res, next) => {
+  try {
+    const user = await authenticateUser(req.body);
+    const sid = createSession(user.id);
+    applySessionCookie(res, sid);
+    res.json(buildEnvelope(user));
+  } catch (error) {
+    next(error);
+  }
+});
+```
+
+* Store per-user collections in maps keyed by user id so swapping to a database later is trivial.
+* Always return JSON envelopes (`{ data, error }`) to keep frontend error handling consistent.
+* Frontend fetch helper should `credentials: 'include'` to carry the auth cookie.
+
+---
+
 ## CSS – layout, flex, grid, responsiveness
 
 ```css
@@ -274,5 +299,4 @@ console.time('x');
 console.timeEnd('x');
 debugger; // breaks in DevTools
 ```
-
 

@@ -1,17 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { apiClient } from '../../services/apiClient.js';
+import { useAuth } from '../../auth/AuthContext.jsx';
 
-const LOCAL_STORAGE_KEY = 'dashboard.calendar.events.v1';
-
-const createEvent = (dateKey, overrides = {}) => ({
-  id:
-    typeof crypto !== 'undefined' && crypto.randomUUID
-      ? crypto.randomUUID()
-      : `event-${Date.now()}-${Math.random()}`,
-  date: dateKey,
-  title: overrides.title ?? 'Untitled event',
-  time: overrides.time ?? '',
-  notes: overrides.notes ?? '',
-  createdAt: new Date().toISOString()
+const weekdayShortNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const monthFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'long',
+  year: 'numeric'
+});
+const dayFormatter = new Intl.DateTimeFormat('en-US', {
+  weekday: 'long',
+  month: 'long',
+  day: 'numeric'
 });
 
 const toDateKey = (date) => {
@@ -26,31 +25,16 @@ const fromDateKey = (dateKey) => {
   return new Date(year, month - 1, day);
 };
 
-const seedEvents = [
-  createEvent(toDateKey(new Date()), {
-    title: 'Sprint planning',
-    time: '09:30',
-    notes: 'Review backlog and finalize priorities.'
-  }),
-  createEvent(toDateKey(new Date(new Date().setDate(new Date().getDate() + 3))), {
-    title: 'Vet appointment',
-    time: '15:15',
-    notes: 'Bring vaccination records.'
-  })
-];
+const eventDateKey = (event) => (event?.startISO ?? '').slice(0, 10);
+const eventTime = (event) => {
+  const iso = event?.startISO ?? '';
+  return iso.length >= 16 ? iso.slice(11, 16) : '';
+};
 
-const weekdayShortNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const monthFormatter = new Intl.DateTimeFormat('en-US', {
-  month: 'long',
-  year: 'numeric'
-});
-const dayFormatter = new Intl.DateTimeFormat('en-US', {
-  weekday: 'long',
-  month: 'long',
-  day: 'numeric'
-});
+const isAllDayEvent = (event) => Boolean(event?.allDay) || !eventTime(event);
 
 export function Calendar() {
+  const { user } = useAuth();
   const today = useMemo(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -61,42 +45,59 @@ export function Calendar() {
     return { year: now.getFullYear(), month: now.getMonth() };
   });
   const [selectedDate, setSelectedDate] = useState(() => toDateKey(new Date()));
-  const [events, setEvents] = useState(() => {
-    if (typeof window === 'undefined') {
-      return seedEvents;
-    }
-    try {
-      const stored = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (!stored) {
-        return seedEvents;
-      }
-      const parsed = JSON.parse(stored);
-      if (!Array.isArray(parsed)) {
-        return seedEvents;
-      }
-      return parsed;
-    } catch (error) {
-      console.warn('Unable to load calendar events', error);
-      return seedEvents;
-    }
-  });
+  const [events, setEvents] = useState([]);
   const [draft, setDraft] = useState({
     title: '',
     time: '',
     notes: ''
   });
   const [statusMessage, setStatusMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const statusTimerRef = useRef();
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
+    let canceled = false;
+    const load = async () => {
+      setIsLoading(true);
+      setErrorMessage('');
+      try {
+        const data = await apiClient.get('/api/events');
+        if (!canceled) {
+          setEvents(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        if (!canceled) {
+          setErrorMessage(error.message || 'Unable to load events.');
+        }
+      } finally {
+        if (!canceled) {
+          setIsLoading(false);
+        }
+      }
+    };
+    load();
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!statusMessage) {
+      return undefined;
     }
-    try {
-      window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(events));
-    } catch (error) {
-      console.warn('Unable to persist calendar events', error);
-    }
-  }, [events]);
+    statusTimerRef.current = setTimeout(() => {
+      setStatusMessage('');
+      statusTimerRef.current = undefined;
+    }, 3200);
+    return () => {
+      if (statusTimerRef.current) {
+        clearTimeout(statusTimerRef.current);
+        statusTimerRef.current = undefined;
+      }
+    };
+  }, [statusMessage]);
 
   const selectedDateObj = useMemo(() => fromDateKey(selectedDate), [selectedDate]);
 
@@ -124,7 +125,7 @@ export function Calendar() {
       const isCurrentMonth = date.getMonth() === month;
       const isToday = toDateKey(today) === dateKey;
       const isSelected = selectedDate === dateKey;
-      const dayEvents = events.filter((event) => event.date === dateKey);
+      const dayEvents = events.filter((event) => eventDateKey(event) === dateKey);
 
       days.push({
         key: dateKey,
@@ -142,14 +143,22 @@ export function Calendar() {
 
   const eventsForSelectedDate = useMemo(() => {
     return events
-      .filter((event) => event.date === selectedDate)
+      .filter((event) => eventDateKey(event) === selectedDate)
       .sort((a, b) => {
-        if (a.time && b.time) {
-          return a.time.localeCompare(b.time);
+        if (isAllDayEvent(a) && !isAllDayEvent(b)) {
+          return -1;
         }
-        if (a.time) return -1;
-        if (b.time) return 1;
-        return a.title.localeCompare(b.title);
+        if (!isAllDayEvent(a) && isAllDayEvent(b)) {
+          return 1;
+        }
+        const timeA = eventTime(a);
+        const timeB = eventTime(b);
+        if (timeA && timeB) {
+          return timeA.localeCompare(timeB);
+        }
+        if (timeA) return -1;
+        if (timeB) return 1;
+        return (a.title || '').localeCompare(b.title || '');
       });
   }, [events, selectedDate]);
 
@@ -176,37 +185,59 @@ export function Calendar() {
     }));
   };
 
-  const handleAddEvent = (event) => {
+  const buildStartISO = () => {
+    const trimmedTime = draft.time.trim();
+    if (!trimmedTime) {
+      return `${selectedDate}T00:00:00`;
+    }
+    return `${selectedDate}T${trimmedTime.padEnd(5, '0')}:00`;
+  };
+
+  const handleAddEvent = async (event) => {
     event.preventDefault();
     const trimmedTitle = draft.title.trim();
     if (!trimmedTitle) {
       setStatusMessage('Enter a title to schedule something.');
       return;
     }
-    const newEvent = createEvent(selectedDate, {
-      title: trimmedTitle,
-      time: draft.time.trim(),
-      notes: draft.notes.trim()
-    });
-    setEvents((previous) => [...previous, newEvent]);
-    setDraft({ title: '', time: '', notes: '' });
-    setStatusMessage('Saved event.');
+    setIsSubmitting(true);
+    setErrorMessage('');
+    try {
+      const payload = {
+        title: trimmedTitle,
+        startISO: buildStartISO(),
+        allDay: !draft.time.trim()
+      };
+      const notes = draft.notes.trim();
+      if (notes) {
+        payload.description = notes;
+      }
+
+      const created = await apiClient.post('/api/events', payload);
+      setEvents((previous) => [...previous, created]);
+      setDraft({ title: '', time: '', notes: '' });
+      setStatusMessage('Saved event.');
+    } catch (requestError) {
+      setErrorMessage(requestError.message || 'Unable to save event.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDeleteEvent = (id) => {
-    setEvents((previous) => previous.filter((event) => event.id !== id));
-    setStatusMessage('Removed event.');
-  };
-
-  useEffect(() => {
-    if (!statusMessage) {
+  const handleDeleteEvent = async (eventId) => {
+    const existing = events.find((event) => event.id === eventId);
+    if (!existing) {
       return;
     }
-    const timer = setTimeout(() => {
-      setStatusMessage('');
-    }, 3500);
-    return () => clearTimeout(timer);
-  }, [statusMessage]);
+    setEvents((previous) => previous.filter((event) => event.id !== eventId));
+    try {
+      await apiClient.delete(`/api/events/${eventId}`);
+      setStatusMessage('Removed event.');
+    } catch (requestError) {
+      setErrorMessage(requestError.message || 'Unable to remove event.');
+      setEvents((previous) => [...previous, existing]);
+    }
+  };
 
   return (
     <section className="dashboard-card calendar-card">
@@ -226,9 +257,27 @@ export function Calendar() {
         </div>
       </header>
 
+      {user ? (
+        <p className="calendar-user" role="note">
+          Signed in as {user.username}
+        </p>
+      ) : null}
+
+      {isLoading ? (
+        <p className="calendar-status" role="status">
+          Loading schedule…
+        </p>
+      ) : null}
+
       {statusMessage ? (
         <p className="calendar-status" role="status">
           {statusMessage}
+        </p>
+      ) : null}
+
+      {errorMessage ? (
+        <p className="calendar-error" role="alert">
+          {errorMessage}
         </p>
       ) : null}
 
@@ -270,6 +319,7 @@ export function Calendar() {
               onChange={handleDraftChange}
               placeholder="What’s happening?"
               required
+              disabled={isSubmitting}
             />
           </label>
           <label>
@@ -279,6 +329,7 @@ export function Calendar() {
               name="time"
               value={draft.time}
               onChange={handleDraftChange}
+              disabled={isSubmitting}
             />
           </label>
           <label className="calendar-notes">
@@ -289,11 +340,14 @@ export function Calendar() {
               onChange={handleDraftChange}
               rows="2"
               placeholder="Extra details"
+              disabled={isSubmitting}
             />
           </label>
         </div>
         <div className="calendar-form-actions">
-          <button type="submit">Save</button>
+          <button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving…' : 'Save'}
+          </button>
         </div>
       </form>
 
@@ -308,13 +362,19 @@ export function Calendar() {
                 <div className="calendar-event-main">
                   <div>
                     <p className="calendar-event-title">{event.title}</p>
-                    {event.time ? <p className="calendar-event-time">{event.time}</p> : null}
+                    {isAllDayEvent(event) ? (
+                      <p className="calendar-event-time">All day</p>
+                    ) : eventTime(event) ? (
+                      <p className="calendar-event-time">{eventTime(event)}</p>
+                    ) : null}
                   </div>
                   <button type="button" onClick={() => handleDeleteEvent(event.id)}>
                     Remove
                   </button>
                 </div>
-                {event.notes ? <p className="calendar-event-notes">{event.notes}</p> : null}
+                {event.description ? (
+                  <p className="calendar-event-notes">{event.description}</p>
+                ) : null}
               </li>
             ))}
           </ul>

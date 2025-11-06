@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { SiteFooter } from '../components/SiteFooter.jsx';
 import { useBodyClass } from '../hooks/useBodyClass.js';
@@ -6,14 +7,23 @@ import { Weather } from './components/Weather.jsx';
 import { TodoList } from './components/TodoList.jsx';
 import { Calendar } from './components/Calendar.jsx';
 import { Notebook } from './components/Notebook.jsx';
+import { useAuth } from '../auth/AuthContext.jsx';
 import './dashboard.css';
 
 export function Dashboard() {
   useBodyClass('dashboard-page');
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
-  const handleLogout = () => {
-    navigate('/');
+  const handleLogout = async () => {
+    setIsSigningOut(true);
+    try {
+      await logout();
+    } finally {
+      setIsSigningOut(false);
+      navigate('/');
+    }
   };
 
   return (
@@ -25,10 +35,16 @@ export function Dashboard() {
         </div>
         <div className="dashboard-user">
           <p>
-            Signed in as: <strong id="username">Guest</strong>
+            Signed in as:{' '}
+            <strong id="username">{user?.username ?? 'Unknown'}</strong>
           </p>
-          <button type="button" id="logoutBtn" onClick={handleLogout}>
-            Switch User
+          <button
+            type="button"
+            id="logoutBtn"
+            onClick={handleLogout}
+            disabled={isSigningOut}
+          >
+            {isSigningOut ? 'Signing out…' : 'Sign Out'}
           </button>
         </div>
       </header>

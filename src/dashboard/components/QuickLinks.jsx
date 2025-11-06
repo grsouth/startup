@@ -1,17 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { apiClient } from '../../services/apiClient.js';
 
-const LOCAL_STORAGE_KEY = 'dashboard.quickLinks.v1';
-
-const defaultLinks = [
+const SUGGESTED_LINKS = [
   {
-    label: 'Github',
-    url: 'https://github.com/grsouth',
+    label: 'GitHub',
+    url: 'https://github.com',
     iconUrl: 'https://github.com/favicon.ico'
-  },
-  {
-    label: 'Jellyfin',
-    url: 'http://jellyfin.local',
-    iconUrl: 'http://jellyfin.local/favicon.ico'
   },
   {
     label: 'Canvas',
@@ -19,90 +13,65 @@ const defaultLinks = [
     iconUrl: 'https://byu.instructure.com/favicon.ico'
   },
   {
-    label: 'AWS',
-    url: 'https://aws.amazon.com',
-    iconUrl: 'https://aws.amazon.com/favicon.ico'
-  },
-  {
     label: 'Gmail',
     url: 'https://mail.google.com',
     iconUrl: 'https://mail.google.com/favicon.ico'
-  },
-  {
-    label: 'Proton Mail',
-    url: 'https://protonmail.com',
-    iconUrl: 'https://protonmail.com/favicon.ico'
   }
 ];
 
-const createLink = ({ label, url, iconUrl }) => ({
-  id:
-    typeof crypto !== 'undefined' && crypto.randomUUID
-      ? crypto.randomUUID()
-      : `link-${Date.now()}-${Math.random()}`,
-  label,
-  url,
-  iconUrl: iconUrl?.trim() || ''
-});
-
-const normalizeLinks = (links) =>
-  links
-    .filter((link) => link?.label && link?.url)
-    .map((link) => ({
-      id:
-        link.id ||
-        (typeof crypto !== 'undefined' && crypto.randomUUID
-          ? crypto.randomUUID()
-          : `link-${Date.now()}-${Math.random()}`),
-      label: link.label,
-      url: link.url,
-      iconUrl: link.iconUrl ?? ''
-    }));
+const INITIAL_DRAFT = { label: '', url: '', iconUrl: '' };
 
 export function QuickLinks() {
-  const [links, setLinks] = useState(() => {
-    if (typeof window === 'undefined') {
-      return normalizeLinks(defaultLinks);
-    }
-    try {
-      const stored = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (!stored) {
-        return normalizeLinks(defaultLinks);
-      }
-      const parsed = JSON.parse(stored);
-      if (!Array.isArray(parsed)) {
-        return normalizeLinks(defaultLinks);
-      }
-      const cleaned = normalizeLinks(parsed);
-      return cleaned.length > 0 ? cleaned : normalizeLinks(defaultLinks);
-    } catch (error) {
-      console.warn('Unable to load quick links from storage', error);
-      return normalizeLinks(defaultLinks);
-    }
-  });
-
+  const [links, setLinks] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(INITIAL_DRAFT);
   const [statusMessage, setStatusMessage] = useState('');
-  const [draft, setDraft] = useState({ label: '', url: '', iconUrl: '' });
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isBusy, setIsBusy] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const statusTimerRef = useRef();
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    try {
-      window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(links));
-    } catch (error) {
-      console.warn('Unable to persist quick links', error);
-    }
-  }, [links]);
+    let canceled = false;
+    const load = async () => {
+      setIsLoading(true);
+      setErrorMessage('');
+      try {
+        const data = await apiClient.get('/api/links');
+        if (!canceled) {
+          setLinks(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        if (!canceled) {
+          setErrorMessage(error.message || 'Unable to load quick links.');
+        }
+      } finally {
+        if (!canceled) {
+          setIsLoading(false);
+        }
+      }
+    };
+    load();
+    return () => {
+      canceled = true;
+    };
+  }, []);
 
   useEffect(() => {
-    if (!statusMessage) {
-      return;
+    return () => {
+      if (statusTimerRef.current) {
+        clearTimeout(statusTimerRef.current);
+      }
+    };
+  }, []);
+
+  const showStatus = (message) => {
+    setStatusMessage(message);
+    if (statusTimerRef.current) {
+      clearTimeout(statusTimerRef.current);
     }
-    const timer = window.setTimeout(() => setStatusMessage(''), 3200);
-    return () => window.clearTimeout(timer);
-  }, [statusMessage]);
+    statusTimerRef.current = setTimeout(() => setStatusMessage(''), 3200);
+  };
 
   const linkInitials = useMemo(() => {
     const map = new Map();
@@ -116,8 +85,9 @@ export function QuickLinks() {
     setIsEditing((previous) => {
       const next = !previous;
       if (!next) {
-        setDraft({ label: '', url: '', iconUrl: '' });
+        setDraft(INITIAL_DRAFT);
         setStatusMessage('');
+        setErrorMessage('');
       }
       return next;
     });
@@ -129,14 +99,20 @@ export function QuickLinks() {
       ...previous,
       [name]: value
     }));
+    if (errorMessage) {
+      setErrorMessage('');
+    }
   };
 
-  const handleAddLink = (event) => {
+  const handleAddLink = async (event) => {
     event.preventDefault();
+
     const trimmedLabel = draft.label.trim();
     const trimmedUrl = draft.url.trim();
+    const trimmedIcon = draft.iconUrl.trim();
+
     if (!trimmedLabel || !trimmedUrl) {
-      setStatusMessage('Provide both a label and a URL.');
+      setErrorMessage('Provide both a label and a URL.');
       return;
     }
 
@@ -146,25 +122,41 @@ export function QuickLinks() {
     }
 
     if (links.some((link) => link.url === normalizedUrl)) {
-      setStatusMessage('Link already exists.');
+      setErrorMessage('That link already exists.');
       return;
     }
 
-    setLinks((previous) => [
-      ...previous,
-      createLink({
+    setIsBusy(true);
+    setErrorMessage('');
+
+    try {
+      const created = await apiClient.post('/api/links', {
         label: trimmedLabel,
         url: normalizedUrl,
-        iconUrl: draft.iconUrl.trim()
-      })
-    ]);
-    setDraft({ label: '', url: '', iconUrl: '' });
-    setStatusMessage('Link added.');
+        iconUrl: trimmedIcon || undefined
+      });
+      setLinks((previous) => [...previous, created]);
+      setDraft(INITIAL_DRAFT);
+      showStatus('Link added.');
+    } catch (error) {
+      setErrorMessage(error.message || 'Unable to add link.');
+    } finally {
+      setIsBusy(false);
+    }
   };
 
-  const handleRemoveLink = (id) => {
-    setLinks((previous) => previous.filter((link) => link.id !== id));
-    setStatusMessage('Link removed.');
+  const handleRemoveLink = async (id) => {
+    setIsBusy(true);
+    setErrorMessage('');
+    try {
+      await apiClient.delete(`/api/links/${id}`);
+      setLinks((previous) => previous.filter((link) => link.id !== id));
+      showStatus('Link removed.');
+    } catch (error) {
+      setErrorMessage(error.message || 'Unable to remove link.');
+    } finally {
+      setIsBusy(false);
+    }
   };
 
   const getIconSrc = (link) => {
@@ -184,6 +176,8 @@ export function QuickLinks() {
     event.currentTarget.onerror = null;
   };
 
+  const showEmptyState = !isLoading && links.length === 0;
+
   return (
     <section className="dashboard-card quick-links-card">
       <div className="quick-links-header">
@@ -194,97 +188,134 @@ export function QuickLinks() {
               {statusMessage}
             </span>
           ) : null}
-          <button type="button" onClick={toggleEditing}>
+          <button type="button" onClick={toggleEditing} disabled={isBusy}>
             {isEditing ? 'Done' : 'Edit'}
           </button>
         </div>
       </div>
 
-      <nav className="quick-links">
-        <ul className={`quick-links-list${isEditing ? ' quick-links-list--editing' : ''}`}>
-          {links.map((link) => {
-            const iconSrc = getIconSrc(link) || '/favicon.ico';
-            const initial = linkInitials.get(link.id) ?? '#';
-            return (
-              <li key={link.id}>
-                <div className="quick-link-info">
-                  {iconSrc ? (
-                    <img src={iconSrc} alt="" width="24" height="24" onError={handleIconError} />
-                  ) : (
-                    <span className="quick-link-avatar" aria-hidden="true">
-                      {initial}
-                    </span>
-                  )}
-                  <div className="quick-link-meta">
-                    <a href={link.url} target="_blank" rel="noreferrer">
-                      {link.label}
-                    </a>
-                    {isEditing ? <span className="quick-link-url">{link.url}</span> : null}
-                  </div>
-                </div>
-                {isEditing ? (
-                  <button
-                    type="button"
-                    className="quick-link-delete"
-                    onClick={() => handleRemoveLink(link.id)}
-                  >
-                    Remove
-                  </button>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+      {isLoading ? (
+        <p className="quick-links-status" role="status">
+          Loading your shortcuts…
+        </p>
+      ) : null}
+
+      {errorMessage ? (
+        <p className="quick-links-error" role="alert">
+          {errorMessage}
+        </p>
+      ) : null}
 
       {isEditing ? (
         <form className="quick-links-form" onSubmit={handleAddLink}>
-          <h3>Add a link</h3>
-          <div className="quick-links-form-grid">
-            <label>
-              <span>Label</span>
-              <input
-                type="text"
-                name="label"
-                value={draft.label}
-                onChange={handleDraftChange}
-                placeholder="Favorite site"
-                required
-              />
-            </label>
-            <label>
-              <span>URL</span>
-              <input
-                type="url"
-                name="url"
-                value={draft.url}
-                onChange={handleDraftChange}
-                placeholder="https://example.com"
-                required
-              />
-            </label>
-            <label>
-              <span>Icon URL</span>
-              <input
-                type="url"
-                name="iconUrl"
-                value={draft.iconUrl}
-                onChange={handleDraftChange}
-                placeholder="https://.../favicon.ico"
-              />
-            </label>
-          </div>
-          <div className="quick-links-form-actions">
-            <button type="submit">Add link</button>
-            <button
-              type="button"
-              onClick={() => setDraft({ label: '', url: '', iconUrl: '' })}
-            >
-              Clear
-            </button>
-          </div>
+          <label>
+            Label
+            <input
+              type="text"
+              name="label"
+              value={draft.label}
+              onChange={handleDraftChange}
+              placeholder="e.g. GitHub"
+              disabled={isBusy}
+            />
+          </label>
+          <label>
+            URL
+            <input
+              type="url"
+              name="url"
+              value={draft.url}
+              onChange={handleDraftChange}
+              placeholder="https://example.com"
+              disabled={isBusy}
+            />
+          </label>
+          <label>
+            Icon URL (optional)
+            <input
+              type="url"
+              name="iconUrl"
+              value={draft.iconUrl}
+              onChange={handleDraftChange}
+              placeholder="https://example.com/favicon.ico"
+              disabled={isBusy}
+            />
+          </label>
+          <button type="submit" disabled={isBusy}>
+            {isBusy ? 'Saving…' : 'Add Link'}
+          </button>
         </form>
       ) : null}
+
+      {showEmptyState ? (
+        <div className="quick-links-empty">
+          <p>No saved links yet. Add your favorite sites to pin them here.</p>
+          <ul>
+            {SUGGESTED_LINKS.map((suggestion) => (
+              <li key={suggestion.url}>
+                <span>{suggestion.label}</span>
+                <span>{suggestion.url}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <nav className="quick-links">
+          <ul
+            className={`quick-links-list${isEditing ? ' quick-links-list--editing' : ''}`}
+          >
+            {links.map((link) => {
+              const iconSrc = getIconSrc(link) || '/favicon.ico';
+              const initials = linkInitials.get(link.id) ?? '#';
+              let displayUrl = link.url;
+              try {
+                const parsed = new URL(link.url);
+                displayUrl = parsed.hostname.replace(/^www\./, '');
+              } catch (error) {
+                displayUrl = link.url;
+              }
+
+              return (
+                <li key={link.id}>
+                  <div className="quick-link-info">
+                    {iconSrc ? (
+                      <img
+                        src={iconSrc}
+                        alt=""
+                        width="28"
+                        height="28"
+                        onError={handleIconError}
+                      />
+                    ) : (
+                      <span className="quick-link-avatar" aria-hidden="true">
+                        {initials}
+                      </span>
+                    )}
+
+                    <div className="quick-link-meta">
+                      <a href={link.url} target="_blank" rel="noreferrer">
+                        {link.label}
+                      </a>
+                      <span className="quick-link-url">{displayUrl}</span>
+                    </div>
+                  </div>
+
+                  {isEditing ? (
+                    <button
+                      type="button"
+                      className="quick-link-delete"
+                      onClick={() => handleRemoveLink(link.id)}
+                      disabled={isBusy}
+                    >
+                      Remove
+                    </button>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      )}
     </section>
   );
 }

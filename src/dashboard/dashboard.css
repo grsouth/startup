@@ -85,6 +85,41 @@ body.dashboard-page {
   color: rgba(201, 209, 217, 0.9);
 }
 
+.quick-links-error {
+  margin: 0;
+  padding: 0.45rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(248, 81, 73, 0.15);
+  color: #f85149;
+  font-weight: 600;
+}
+
+.quick-links-empty {
+  padding: 1.1rem;
+  border-radius: 12px;
+  border: 1px dashed rgba(56, 139, 253, 0.25);
+  background: rgba(8, 24, 46, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.quick-links-empty ul {
+  margin: 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.quick-links-empty span:last-of-type {
+  color: rgba(201, 209, 217, 0.65);
+  font-size: 0.85rem;
+}
+
+.quick-links {
+  width: 100%;
+}
+
 .quick-links-list {
   list-style: none;
   padding: 0;
@@ -240,7 +275,7 @@ body.dashboard-page {
 
 .weather-search {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
   gap: 0.75rem;
   align-items: end;
 }
@@ -342,6 +377,32 @@ body.dashboard-page {
   font-size: 0.9rem;
 }
 
+.weather-hourly {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.weather-hourly ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.weather-hourly li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(56, 139, 253, 0.15);
+  background: rgba(8, 24, 46, 0.55);
+}
+
 .todo-card {
   grid-area: todo;
 }
@@ -394,12 +455,28 @@ body.dashboard-page {
   align-items: center;
 }
 
+.calendar-user {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(201, 209, 217, 0.7);
+}
+
 .calendar-status {
   margin: 0;
   padding: 0.5rem 0.75rem;
   border-radius: 8px;
   background: rgba(56, 139, 253, 0.15);
   font-size: 0.9rem;
+}
+
+.calendar-error {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(248, 81, 73, 0.12);
+  color: #f85149;
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .calendar-grid {
@@ -605,20 +682,45 @@ body.dashboard-page {
   font-size: 0.9rem;
 }
 
-.todo-actions {
+.todo-error {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(248, 81, 73, 0.12);
+  color: #f85149;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.todo-form {
   display: flex;
-  flex-wrap: wrap;
   gap: 0.75rem;
   width: 100%;
 }
 
-.todo-actions input {
+.todo-form input {
   flex: 1 1 auto;
   min-width: 0;
 }
 
-.todo-actions button {
+.todo-form button {
   flex: 0 0 auto;
+}
+
+.todo-clear {
+  align-self: flex-end;
+  background: transparent;
+  border: none;
+  color: #58a6ff;
+  font-weight: 600;
+  padding: 0.35rem 0.5rem;
+}
+
+.todo-clear:hover,
+.todo-clear:focus {
+  background: transparent;
+  color: #79c0ff;
+  text-decoration: underline;
 }
 
 .notebook-header {
@@ -665,6 +767,20 @@ body.dashboard-page {
   min-width: 160px;
 }
 
+.notebook-error {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(248, 81, 73, 0.12);
+  color: #f85149;
+  font-weight: 600;
+}
+
+.notebook-loading {
+  margin: 0;
+  color: rgba(201, 209, 217, 0.75);
+}
+
 .notebook-body {
   display: grid;
   grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
@@ -694,6 +810,8 @@ body.dashboard-page {
   border: 1px solid rgba(56, 139, 253, 0.15);
   background: rgba(8, 24, 46, 0.6);
   overflow: hidden;
+  position: relative;
+  gap: 0.35rem;
 }
 
 .notebook-list-item {
@@ -704,6 +822,10 @@ body.dashboard-page {
   padding: 0.75rem 0.9rem;
   width: 100%;
   text-align: left;
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
 }
 
 .notebook-list-item.active {
@@ -725,12 +847,21 @@ body.dashboard-page {
   color: rgba(201, 209, 217, 0.7);
 }
 
-.notebook-list-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border-top: 1px solid rgba(56, 139, 253, 0.12);
+.notebook-delete {
+  align-self: flex-end;
+  margin: 0 0.75rem 0.75rem;
+  background: transparent;
+  border: none;
+  color: #f85149;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.notebook-delete:hover,
+.notebook-delete:focus {
+  background: transparent;
+  color: #ff7b72;
+  text-decoration: underline;
 }
 
 .notebook-empty {
@@ -746,16 +877,21 @@ body.dashboard-page {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  min-height: 280px;
 }
 
-.notebook-title-input {
-  font-size: 1.1rem;
-  font-weight: 600;
-  padding: 0.65rem 0.75rem;
+.notebook-editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.notebook-editor textarea {
+.notebook-editor-field input,
+.notebook-editor-field textarea {
   width: 100%;
+}
+
+.notebook-editor-body textarea {
   min-height: 220px;
   resize: vertical;
 }
@@ -770,15 +906,6 @@ body.dashboard-page {
   padding: 1.5rem;
   color: rgba(201, 209, 217, 0.75);
   text-align: center;
-}
-
-.notebook-editor-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.notebook-editor-actions button {
-  margin-top: 0.5rem;
 }
 
 .todo-footer {

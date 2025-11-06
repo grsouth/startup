@@ -1,284 +1,316 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { apiClient } from '../../services/apiClient.js';
 
-const LOCAL_STORAGE_KEY = 'dashboard.weather.v1';
-
-const MOCK_WEATHER = {
-  'Provo, UT': {
-    condition: 'Partly Cloudy',
-    icon: '🌤️',
-    temperature: 68,
-    feelsLike: 65,
-    high: 72,
-    low: 52,
-    humidity: 0.38,
-    aqi: 42,
-    wind: 7,
-    updatedAt: new Date().toISOString()
-  },
-  'Seattle, WA': {
-    condition: 'Light Rain',
-    icon: '🌧️',
-    temperature: 59,
-    feelsLike: 58,
-    high: 61,
-    low: 51,
-    humidity: 0.81,
-    aqi: 18,
-    wind: 9,
-    updatedAt: new Date().toISOString()
-  },
-  'Phoenix, AZ': {
-    condition: 'Sunny',
-    icon: '☀️',
-    temperature: 88,
-    feelsLike: 85,
-    high: 96,
-    low: 74,
-    humidity: 0.19,
-    aqi: 55,
-    wind: 5,
-    updatedAt: new Date().toISOString()
-  }
+const DEFAULT_COORDINATES = {
+  latitude: 40.2338,
+  longitude: -111.6585
 };
 
-const DEFAULT_LOCATION = 'Provo, UT';
-const DEFAULT_COORDINATES = { lat: 40.2338, lon: -111.6585 };
-const MOCK_USER_COORDINATES = { lat: 47.6062, lon: -122.3321 };
+const WEATHER_CODES = {
+  0: { label: 'Clear sky', icon: '☀️' },
+  1: { label: 'Mainly clear', icon: '🌤️' },
+  2: { label: 'Partly cloudy', icon: '⛅' },
+  3: { label: 'Overcast', icon: '☁️' },
+  45: { label: 'Fog', icon: '🌫️' },
+  48: { label: 'Rime fog', icon: '🌫️' },
+  51: { label: 'Light drizzle', icon: '🌦️' },
+  53: { label: 'Drizzle', icon: '🌦️' },
+  55: { label: 'Heavy drizzle', icon: '🌧️' },
+  61: { label: 'Light rain', icon: '🌦️' },
+  63: { label: 'Rain', icon: '🌧️' },
+  65: { label: 'Heavy rain', icon: '🌧️' },
+  71: { label: 'Light snow', icon: '🌨️' },
+  73: { label: 'Snow', icon: '🌨️' },
+  75: { label: 'Heavy snow', icon: '🌨️' },
+  80: { label: 'Rain showers', icon: '🌦️' },
+  81: { label: 'Heavy showers', icon: '🌧️' },
+  82: { label: 'Violent showers', icon: '🌧️' },
+  95: { label: 'Thunderstorm', icon: '⛈️' },
+  96: { label: 'Thunderstorm & hail', icon: '⛈️' },
+  99: { label: 'Heavy storm & hail', icon: '⛈️' }
+};
 
-function getMockLocationFromCoords(coords) {
-  if (!coords) {
-    return DEFAULT_LOCATION;
-  }
+const interpretWeatherCode = (code) => WEATHER_CODES[code] || { label: 'Unknown', icon: '❓' };
 
-  const { lat, lon } = coords;
-  if (lat > 45) {
-    return 'Seattle, WA';
-  }
-  if (lat < 35 && lon < -100) {
-    return 'Phoenix, AZ';
-  }
-  return DEFAULT_LOCATION;
-}
-
-function getMockWeather(location) {
-  const key = location || DEFAULT_LOCATION;
-  const now = new Date();
-  const base = MOCK_WEATHER[key] ?? {
-    condition: 'Clear',
-    icon: '🌕',
-    temperature: 62,
-    feelsLike: 60,
-    high: 66,
-    low: 50,
-    humidity: 0.42,
-    aqi: 38,
-    wind: 4,
-    updatedAt: now.toISOString()
-  };
-  return {
-    ...base,
-    location: key,
-    updatedAt: now.toISOString()
-  };
-}
+const parseNumberInput = (value) => {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : '';
+};
 
 export function Weather() {
-  const [location, setLocation] = useState(DEFAULT_LOCATION);
-  const [forecast, setForecast] = useState(() => getMockWeather(DEFAULT_LOCATION));
-  const [isLoading, setIsLoading] = useState(false);
-  const [statusMessage, setStatusMessage] = useState('');
   const [coordinates, setCoordinates] = useState(DEFAULT_COORDINATES);
-  const requestRef = useRef(0);
+  const [draftCoordinates, setDraftCoordinates] = useState({
+    latitude: String(DEFAULT_COORDINATES.latitude.toFixed(4)),
+    longitude: String(DEFAULT_COORDINATES.longitude.toFixed(4))
+  });
+  const [forecast, setForecast] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const statusTimerRef = useRef();
 
-  useEffect(() => {
-    return () => {
-      if (statusTimerRef.current) {
-        clearTimeout(statusTimerRef.current);
+  const fetchForecast = useCallback(
+    async (coords, { silent = false } = {}) => {
+      if (!silent) {
+        setIsLoading(true);
       }
-    };
-  }, []);
+      setErrorMessage('');
+      try {
+        const params = new URLSearchParams({
+          lat: coords.latitude.toFixed(4),
+          lon: coords.longitude.toFixed(4)
+        });
+        const data = await apiClient.get(`/api/weather?${params.toString()}`);
+        setForecast(data);
+        setStatusMessage(
+          `Updated at ${new Date().toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
+          })}`
+        );
+      } catch (error) {
+        setErrorMessage(error.message || 'Unable to load weather forecast.');
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setCoordinates(MOCK_USER_COORDINATES);
-    }, 300);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, []);
+    fetchForecast(DEFAULT_COORDINATES);
+  }, [fetchForecast]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
       return;
     }
-    try {
-      const stored = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (!stored) {
-        return;
-      }
-      const parsed = JSON.parse(stored);
-      if (parsed?.forecast && parsed.forecast.location) {
-        setForecast(parsed.forecast);
-        setLocation(parsed.forecast.location);
-      }
-      if (parsed?.coordinates) {
-        setCoordinates(parsed.coordinates);
-      }
-    } catch (error) {
-      console.warn('Unable to load weather preferences', error);
-    }
-  }, []);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const coords = {
+          latitude,
+          longitude
+        };
+        setCoordinates(coords);
+        setDraftCoordinates({
+          latitude: latitude.toFixed(4),
+          longitude: longitude.toFixed(4)
+        });
+        fetchForecast(coords, { silent: true });
+      },
+      () => {
+        // Ignore permission errors silently and keep defaults
+      },
+      { maximumAge: 1000 * 60 * 10, timeout: 4000 }
+    );
+  }, [fetchForecast]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    const payload = {
-      location,
-      forecast,
-      coordinates
-    };
-    try {
-      window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(payload));
-    } catch (error) {
-      console.warn('Unable to save weather preferences', error);
-    }
-  }, [coordinates, forecast, location]);
-
-  const feelsLikeText = useMemo(() => {
-    if (!forecast) {
-      return '';
-    }
-    const difference = forecast.feelsLike - forecast.temperature;
-    if (Math.abs(difference) < 1) {
-      return 'Feels like the actual temperature.';
-    }
-    if (difference > 0) {
-      return `Feels ${Math.round(difference)}° warmer.`;
-    }
-    return `Feels ${Math.abs(Math.round(difference))}° cooler.`;
-  }, [forecast]);
-
-  const updateStatus = (message) => {
-    setStatusMessage(message);
-    if (statusTimerRef.current) {
-      clearTimeout(statusTimerRef.current);
+    if (!statusMessage) {
+      return undefined;
     }
     statusTimerRef.current = setTimeout(() => {
       setStatusMessage('');
       statusTimerRef.current = undefined;
     }, 4000);
+    return () => {
+      if (statusTimerRef.current) {
+        clearTimeout(statusTimerRef.current);
+        statusTimerRef.current = undefined;
+      }
+    };
+  }, [statusMessage]);
+
+  const currentWeather = forecast?.current ?? null;
+
+  const feelsLikeText = useMemo(() => {
+    if (!currentWeather) {
+      return '';
+    }
+    const diff = (currentWeather.apparentTemperature ?? 0) - (currentWeather.temperature ?? 0);
+    if (Math.abs(diff) < 1) {
+      return 'Feels like the actual temperature.';
+    }
+    if (diff > 0) {
+      return `Feels ${Math.round(diff)}° warmer.`;
+    }
+    return `Feels ${Math.abs(Math.round(diff))}° cooler.`;
+  }, [currentWeather]);
+
+  const hourlyPreview = useMemo(() => {
+    if (!forecast?.hourly) {
+      return [];
+    }
+    return forecast.hourly.slice(0, 8).map((entry) => {
+      const code = interpretWeatherCode(entry.weatherCode);
+      return {
+        time: new Date(entry.at).toLocaleTimeString([], { hour: 'numeric' }),
+        icon: code.icon,
+        temperature: entry.temperature !== null ? Math.round(entry.temperature) : null,
+        precipitation: entry.precipitationProbability
+      };
+    });
+  }, [forecast]);
+
+  const handleCoordinateChange = (event) => {
+    const { name, value } = event.target;
+    setDraftCoordinates((previous) => ({
+      ...previous,
+      [name]: value
+    }));
   };
 
-  const fetchForecast = async (effectiveLocation) => {
-    setIsLoading(true);
-    const requestId = Date.now();
-    requestRef.current = requestId;
-
-    await new Promise((resolve) => setTimeout(resolve, 850));
-    const data = getMockWeather(effectiveLocation);
-
-    if (requestRef.current !== requestId) {
-      setIsLoading(false);
+  const handleCoordinateSubmit = (event) => {
+    event.preventDefault();
+    const lat = parseNumberInput(draftCoordinates.latitude);
+    const lon = parseNumberInput(draftCoordinates.longitude);
+    if (lat === '' || lon === '') {
+      setErrorMessage('Enter valid latitude and longitude values.');
       return;
     }
-
-    setForecast(data);
-    setLocation(data.location);
-    setIsLoading(false);
-    updateStatus(`Updated at ${new Date(data.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      setErrorMessage('Coordinates must be within valid ranges.');
+      return;
+    }
+    const next = { latitude: lat, longitude: lon };
+    setCoordinates(next);
+    setDraftCoordinates({
+      latitude: lat.toFixed(4),
+      longitude: lon.toFixed(4)
+    });
+    setIsRefreshing(true);
+    fetchForecast(next);
   };
 
-  useEffect(() => {
-    let canceled = false;
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      if (canceled) {
-        return;
-      }
-      const coords = coordinates ?? DEFAULT_COORDINATES;
-      const derivedLocation = getMockLocationFromCoords(coords);
-      setLocation(derivedLocation);
-      setForecast(getMockWeather(derivedLocation));
-      setIsLoading(false);
-      updateStatus('Detected location automatically.');
-    }, 650);
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchForecast(coordinates);
+  };
 
-    return () => {
-      canceled = true;
-      clearTimeout(timer);
-    };
-  }, [coordinates]);
+  const currentCode = interpretWeatherCode(currentWeather?.weatherCode);
 
   return (
     <section className="dashboard-card weather-card">
       <header className="weather-header">
-        <h2 className="section-title">Weather</h2>
+        <div>
+          <h2 className="section-title">Weather</h2>
+          <p className="weather-meta">
+            {forecast?.location
+              ? `${forecast.location.latitude.toFixed(2)}, ${forecast.location.longitude.toFixed(2)} • ${forecast.location.timezone}`
+              : 'Local conditions'}
+          </p>
+        </div>
         <div className="weather-meta">
-          {forecast ? (
-            <span>Last checked {new Date(forecast.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-          ) : null}
           {statusMessage ? (
             <span className="weather-status" role="status">
               {statusMessage}
             </span>
           ) : null}
+          <button type="button" onClick={handleRefresh} disabled={isRefreshing || isLoading}>
+            {isRefreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
         </div>
       </header>
 
-      <div className="weather-search">
+      <form className="weather-search" onSubmit={handleCoordinateSubmit}>
         <label>
-          <span>Current location</span>
-          <input type="text" value={location} readOnly aria-label="Current location" />
+          Latitude
+          <input
+            type="number"
+            step="0.0001"
+            name="latitude"
+            value={draftCoordinates.latitude}
+            onChange={handleCoordinateChange}
+          />
         </label>
-        <button type="button" onClick={() => fetchForecast(location)} disabled={isLoading}>
-          {isLoading ? 'Fetching...' : 'Refresh'}
+        <label>
+          Longitude
+          <input
+            type="number"
+            step="0.0001"
+            name="longitude"
+            value={draftCoordinates.longitude}
+            onChange={handleCoordinateChange}
+          />
+        </label>
+        <button type="submit" disabled={isRefreshing || isLoading}>
+          Update
         </button>
-      </div>
+      </form>
+
+      {errorMessage ? (
+        <p className="weather-error" role="alert">
+          {errorMessage}
+        </p>
+      ) : null}
+
+      {isLoading && !forecast ? (
+        <p className="weather-empty" role="status">
+          Fetching forecast…
+        </p>
+      ) : null}
 
       {forecast ? (
         <div className="weather-content">
           <div className="weather-current">
-            <span className="weather-icon" role="img" aria-label={forecast.condition}>
-              {forecast.icon}
+            <span className="weather-icon" role="img" aria-label={currentCode.label}>
+              {currentCode.icon}
             </span>
             <div>
               <p className="weather-temp">
-                {Math.round(forecast.temperature)}
+                {currentWeather?.temperature !== undefined
+                  ? Math.round(currentWeather.temperature)
+                  : '--'}
                 <span>°F</span>
               </p>
-              <p className="weather-condition">{forecast.condition}</p>
+              <p className="weather-condition">{currentCode.label}</p>
               <p className="weather-feels">{feelsLikeText}</p>
             </div>
           </div>
+
           <dl className="weather-details">
             <div>
-              <dt>High</dt>
-              <dd>{Math.round(forecast.high)}°F</dd>
-            </div>
-            <div>
-              <dt>Low</dt>
-              <dd>{Math.round(forecast.low)}°F</dd>
-            </div>
-            <div>
-              <dt>Humidity</dt>
-              <dd>{Math.round(forecast.humidity * 100)}%</dd>
+              <dt>Feels like</dt>
+              <dd>
+                {currentWeather?.apparentTemperature !== undefined
+                  ? `${Math.round(currentWeather.apparentTemperature)} °F`
+                  : '—'}
+              </dd>
             </div>
             <div>
               <dt>Wind</dt>
-              <dd>{Math.round(forecast.wind)} mph</dd>
-            </div>
-            <div>
-              <dt>AQI</dt>
-              <dd>{forecast.aqi}</dd>
+              <dd>
+                {currentWeather?.windSpeed !== undefined
+                  ? `${Math.round(currentWeather.windSpeed)} mph`
+                  : '—'}
+              </dd>
             </div>
           </dl>
+
+          <section className="weather-hourly">
+            <h3>Next hours</h3>
+            {hourlyPreview.length === 0 ? (
+              <p className="weather-empty">No hourly data available.</p>
+            ) : (
+              <ul>
+                {hourlyPreview.map((hour, index) => (
+                  <li key={`${hour.time}-${index}`}>
+                    <span>{hour.time}</span>
+                    <span role="img" aria-label="conditions">
+                      {hour.icon}
+                    </span>
+                    <span>{hour.temperature !== null ? `${hour.temperature}°` : '--'}</span>
+                    <span>{hour.precipitation ?? 0}%</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </div>
-      ) : (
-        <p className="weather-empty">No weather data yet. Refresh to load conditions.</p>
-      )}
+      ) : null}
     </section>
   );
 }

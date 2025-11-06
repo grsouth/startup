@@ -15,18 +15,60 @@ body.login-page {
   box-shadow: 0 12px 32px rgba(2, 9, 22, 0.55);
 }
 
-.login-content form {
+.login-subtitle {
+  margin: 0;
+  color: rgba(201, 209, 217, 0.7);
+}
+
+.login-form {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
 }
 
-.login-content label {
+.login-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: left;
   font-weight: 600;
 }
 
-.login-content button {
+.login-form button {
   width: 100%;
+}
+
+.login-error {
+  margin: -0.25rem 0 0;
+  color: #f85149;
+  font-weight: 600;
+}
+
+.login-mode-toggle {
+  background: transparent;
+  color: #58a6ff;
+  border: none;
+  width: fit-content;
+  margin: 0 auto;
+  text-decoration: underline;
+}
+
+.login-mode-toggle:hover,
+.login-mode-toggle:focus {
+  background: transparent;
+  color: #79c0ff;
+  text-decoration: none;
+}
+
+.login-status {
+  margin: 0;
+  color: rgba(201, 209, 217, 0.7);
+}
+
+.login-meta {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(201, 209, 217, 0.6);
 }
 
 .site-footer {

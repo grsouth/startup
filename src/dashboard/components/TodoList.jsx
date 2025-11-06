@@ -1,175 +1,179 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-
-const LOCAL_STORAGE_KEY = 'dashboard.todoItems';
-const MOCK_REMOTE_TASKS = [
-  'Follow up on feature requests',
-  'Block off time for design review',
-  'Prep grocery order for Friday',
-  'Schedule dog grooming appointment',
-  'Share sprint notes with the team'
-];
-
-const createTask = (text, source = 'local') => ({
-  id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `task-${Date.now()}-${Math.random()}`,
-  text,
-  completed: false,
-  source,
-  createdAt: new Date().toISOString()
-});
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { apiClient } from '../../services/apiClient.js';
 
 const sortTasks = (tasks) =>
   [...tasks].sort((a, b) => {
-    if (a.completed !== b.completed) {
-      return a.completed ? 1 : -1;
+    if (a.done !== b.done) {
+      return a.done ? 1 : -1;
     }
     return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
   });
 
-const defaultTasks = [
-  createTask('Pet dog', 'seed'),
-  createTask('Pet dog again', 'seed'),
-  createTask('Feed dog', 'seed')
-];
-
 export function TodoList() {
-  const messageTimeoutRef = useRef();
-  const remoteIndexRef = useRef(0);
-  const [tasks, setTasks] = useState(() => {
-    if (typeof window === 'undefined') {
-      return sortTasks(defaultTasks);
-    }
-    try {
-      const stored = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (!stored) {
-        return sortTasks(defaultTasks);
-      }
-      const parsed = JSON.parse(stored);
-      if (!Array.isArray(parsed)) {
-        return sortTasks(defaultTasks);
-      }
-      const normalised = parsed.map((task) => ({
-        ...task,
-        createdAt: task.createdAt ?? new Date().toISOString()
-      }));
-      return sortTasks(normalised);
-    } catch (error) {
-      console.warn('Unable to load todo items from storage', error);
-      return sortTasks(defaultTasks);
-    }
-  });
+  const [tasks, setTasks] = useState([]);
   const [draft, setDraft] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
-  const [lastSavedAt, setLastSavedAt] = useState(null);
-  const isBrowser = typeof window !== 'undefined';
-  const remainingCount = useMemo(() => tasks.filter((task) => !task.completed).length, [tasks]);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isBusy, setIsBusy] = useState(false);
+  const statusTimerRef = useRef();
+
+  useEffect(() => {
+    let canceled = false;
+    const load = async () => {
+      setIsLoading(true);
+      setErrorMessage('');
+      try {
+        const data = await apiClient.get('/api/todos');
+        if (!canceled) {
+          setTasks(Array.isArray(data) ? sortTasks(data) : []);
+        }
+      } catch (error) {
+        if (!canceled) {
+          setErrorMessage(error.message || 'Unable to load tasks.');
+        }
+      } finally {
+        if (!canceled) {
+          setIsLoading(false);
+        }
+      }
+    };
+    load();
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (statusTimerRef.current) {
+        clearTimeout(statusTimerRef.current);
+      }
+    };
+  }, []);
+
+  const showStatus = (message) => {
+    setStatusMessage(message);
+    if (statusTimerRef.current) {
+      clearTimeout(statusTimerRef.current);
+    }
+    statusTimerRef.current = setTimeout(() => setStatusMessage(''), 4000);
+  };
+
+  const remainingCount = useMemo(
+    () => tasks.filter((task) => !task.done).length,
+    [tasks]
+  );
+
   const completedCount = tasks.length - remainingCount;
 
-  const showStatus = useCallback((message) => {
-    if (!message) {
-      return;
-    }
-    setStatusMessage(message);
-    if (messageTimeoutRef.current) {
-      clearTimeout(messageTimeoutRef.current);
-    }
-    messageTimeoutRef.current = setTimeout(() => {
-      setStatusMessage('');
-      messageTimeoutRef.current = undefined;
-    }, 4500);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (messageTimeoutRef.current) {
-        clearTimeout(messageTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isBrowser) {
-      return;
-    }
-    window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(tasks));
-    setLastSavedAt(new Date());
-  }, [isBrowser, tasks]);
-
-  useEffect(() => {
-    if (!isBrowser) {
-      return undefined;
-    }
-
-    if (remoteIndexRef.current >= MOCK_REMOTE_TASKS.length) {
-      return undefined;
-    }
-
-    const intervalId = window.setInterval(() => {
-      const nextIndex = remoteIndexRef.current;
-      if (nextIndex >= MOCK_REMOTE_TASKS.length) {
-        window.clearInterval(intervalId);
-        return;
-      }
-
-      const incomingTask = createTask(MOCK_REMOTE_TASKS[nextIndex], 'remote');
-      remoteIndexRef.current += 1;
-
-      let wasAdded = false;
-      setTasks((previous) => {
-        if (previous.some((task) => task.text.toLowerCase() === incomingTask.text.toLowerCase())) {
-          return previous;
-        }
-        wasAdded = true;
-        return sortTasks([...previous, incomingTask]);
-      });
-      if (wasAdded) {
-        showStatus(`Collaborator added "${incomingTask.text}"`);
-      }
-    }, 45000);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [isBrowser, showStatus]);
-
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const trimmed = draft.trim();
     if (!trimmed) {
       return;
     }
-    setTasks((previous) => sortTasks([...previous, createTask(trimmed)]));
-    setDraft('');
-    showStatus(`Added "${trimmed}"`);
+
+    setIsBusy(true);
+    setErrorMessage('');
+
+    try {
+      const created = await apiClient.post('/api/todos', { text: trimmed });
+      setTasks((previous) => sortTasks([...previous, created]));
+      setDraft('');
+      showStatus(`Added "${trimmed}"`);
+    } catch (error) {
+      setErrorMessage(error.message || 'Unable to add task.');
+    } finally {
+      setIsBusy(false);
+    }
   };
 
-  const handleToggle = (taskId) => {
+  const handleToggle = async (task) => {
+    const nextDone = !task.done;
     setTasks((previous) =>
       sortTasks(
-        previous.map((task) => (task.id === taskId ? { ...task, completed: !task.completed } : task))
+        previous.map((item) =>
+          item.id === task.id ? { ...item, done: nextDone } : item
+        )
       )
     );
+
+    try {
+      const updated = await apiClient.put(`/api/todos/${task.id}`, {
+        done: nextDone
+      });
+      setTasks((previous) =>
+        sortTasks(
+          previous.map((item) => (item.id === task.id ? updated : item))
+        )
+      );
+      showStatus(
+        nextDone
+          ? `Marked "${task.text}" as complete`
+          : `Reopened "${task.text}"`
+      );
+    } catch (error) {
+      setTasks((previous) =>
+        sortTasks(
+          previous.map((item) =>
+            item.id === task.id ? { ...item, done: !nextDone } : item
+          )
+        )
+      );
+      setErrorMessage(error.message || 'Unable to update task.');
+    }
   };
 
-  const handleDelete = (taskId) => {
-    setTasks((previous) => previous.filter((task) => task.id !== taskId));
-    showStatus('Removed task');
+  const handleDelete = async (task) => {
+    setTasks((previous) => previous.filter((item) => item.id !== task.id));
+    try {
+      await apiClient.delete(`/api/todos/${task.id}`);
+      showStatus('Removed task.');
+    } catch (error) {
+      setErrorMessage(error.message || 'Unable to remove task.');
+      setTasks((previous) => sortTasks([...previous, task]));
+    }
   };
 
-  const handleClearCompleted = () => {
-    setTasks((previous) => previous.filter((task) => !task.completed));
-    showStatus('Cleared completed tasks');
+  const handleClearCompleted = async () => {
+    const completed = tasks.filter((task) => task.done);
+    if (completed.length === 0) {
+      return;
+    }
+    setIsBusy(true);
+    setTasks((previous) => previous.filter((task) => !task.done));
+    try {
+      await Promise.all(
+        completed.map((task) => apiClient.delete(`/api/todos/${task.id}`))
+      );
+      showStatus('Cleared completed tasks.');
+    } catch (error) {
+      setErrorMessage(error.message || 'Unable to clear completed tasks.');
+      setTasks((previous) => sortTasks([...previous, ...completed]));
+    } finally {
+      setIsBusy(false);
+    }
   };
 
   return (
     <section className="dashboard-card todo-card">
       <div className="todo-header">
         <h2 className="section-title">TODO</h2>
-        <span className="todo-count">{remainingCount} open | {completedCount} done</span>
+        <span className="todo-count">
+          {remainingCount} open | {completedCount} done
+        </span>
       </div>
 
       <p className="todo-description">
-        Tasks sync in real-time with collaborators (simulated). Local changes persist to this device.
+        Tasks persist to your account and sync across devices.
       </p>
+
+      {isLoading ? (
+        <p className="todo-status" role="status">
+          Loading tasks…
+        </p>
+      ) : null}
 
       {statusMessage ? (
         <p className="todo-status" role="status">
@@ -177,22 +181,48 @@ export function TodoList() {
         </p>
       ) : null}
 
-      {tasks.length === 0 ? (
-        <p className="todo-empty">No tasks yet. Add your first item to get started.</p>
+      {errorMessage ? (
+        <p className="todo-error" role="alert">
+          {errorMessage}
+        </p>
+      ) : null}
+
+      <form className="todo-form" onSubmit={handleSubmit}>
+        <input
+          type="text"
+          placeholder="Add a new task"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          disabled={isBusy}
+        />
+        <button type="submit" disabled={isBusy || !draft.trim()}>
+          {isBusy ? 'Saving…' : 'Add'}
+        </button>
+      </form>
+
+      {tasks.length === 0 && !isLoading ? (
+        <p className="todo-empty">
+          No tasks yet. Add your first item to get started.
+        </p>
       ) : (
         <ul className="todo-list">
           {tasks.map((task) => (
-            <li key={task.id} className={`todo-item${task.completed ? ' completed' : ''}`}>
+            <li key={task.id} className={`todo-item${task.done ? ' completed' : ''}`}>
               <label>
                 <input
                   type="checkbox"
-                  checked={task.completed}
-                  onChange={() => handleToggle(task.id)}
-                  aria-label={`Mark "${task.text}" as ${task.completed ? 'incomplete' : 'complete'}`}
+                  checked={task.done}
+                  onChange={() => handleToggle(task)}
+                  aria-label={`Mark "${task.text}" as ${task.done ? 'incomplete' : 'complete'}`}
                 />
                 <span>{task.text}</span>
               </label>
-              <button type="button" onClick={() => handleDelete(task.id)} className="todo-remove">
+              <button
+                type="button"
+                onClick={() => handleDelete(task)}
+                className="todo-remove"
+                disabled={isBusy}
+              >
                 Remove
               </button>
             </li>
@@ -200,25 +230,14 @@ export function TodoList() {
         </ul>
       )}
 
-      <form className="todo-actions" onSubmit={handleSubmit}>
-        <input
-          type="text"
-          placeholder="New task"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          aria-label="Task name"
-        />
-        <button type="submit">Add</button>
-      </form>
-
-      <div className="todo-footer">
-        <button type="button" onClick={handleClearCompleted} disabled={completedCount === 0}>
-          Clear completed
-        </button>
-        <span className="todo-saved-at">
-          {lastSavedAt ? `Saved ${lastSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Syncing...'}
-        </span>
-      </div>
+      <button
+        type="button"
+        className="todo-clear"
+        onClick={handleClearCompleted}
+        disabled={isBusy || completedCount === 0}
+      >
+        Clear completed
+      </button>
     </section>
   );
 }

@@ -52,4 +52,41 @@ At this point it's still static, but the bones are there. It's bundled up with v
 
 ## React Part 2
 
-We rebuilt the dashboard to run entirely on React and added interactive JavaScript for all the widgets. Quick links now run through a React component that lets you edit, add, and delete links. The weather card auto-detects a location, fetches mocked data, and shows a refresh button. The todo list, notebook, and calendar all manage state with useState/useEffect, saving data locally and providing updates 
+We rebuilt the dashboard to run entirely on React and added interactive JavaScript for all the widgets. Quick links now run through a React component that lets you edit, add, and delete links. The weather card auto-detects a location, fetches mocked data, and shows a refresh button. The todo list, notebook, and calendar all manage state with `useState`/`useEffect`, saving data locally and providing dynamic updates.
+
+## Service Deliverable
+
+- Added an Express service in `service/` with REST endpoints for authentication plus CRUD for links, todos, notes, and calendar events.
+- Implemented session-backed auth with hashed passwords, secure cookies, and `requireAuth` middleware.
+- Wired the React login/logout/register flow to the service and gated the dashboard behind a protected route that checks `/api/me`.
+- Migrated every dashboard widget off `localStorage` and onto the service:
+  - Quick Links, Todos, Notes, and Calendar now fetch from `/api/*`, persist changes, and show error/loading states.
+  - Notebook edits auto-save with a debounced update that writes back to the service.
+  - Calendar events persist timestamps and sort all-day vs timed entries.
+- Swapped the weather widget to call our `/api/weather` proxy (Open-Meteo) with live coordinates, geolocation fallback, and coordinate form overrides.
+- Created a shared `apiClient` helper for authenticated JSON requests with consistent error handling.
+- Documented the workflow in `notes.md` and refreshed this README with the backend/service instructions.
+
+### Running locally
+
+1. Install dependencies for the frontend and service:
+
+   ```bash
+   npm install
+   cd service && npm install
+   ```
+
+2. In one terminal start the backend service:
+
+   ```bash
+   cd service
+   npm run dev
+   ```
+
+3. In another terminal start the Vite dev server:
+
+   ```bash
+   npm run dev
+   ```
+
+Vite proxies `/api/*` requests to the Express service on port 4000, so the dashboard can authenticate and load data during development.
