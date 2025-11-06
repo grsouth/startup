@@ -5,6 +5,10 @@ const { version } = require('./package.json');
 const { buildEnvelope } = require('./response');
 const authRouter = require('./routes/auth');
 const meRouter = require('./routes/me');
+const linksRouter = require('./routes/links');
+const todosRouter = require('./routes/todos');
+const notesRouter = require('./routes/notes');
+const eventsRouter = require('./routes/events');
 
 const DEFAULT_PORT = 4000;
 
@@ -18,6 +22,10 @@ function createApp() {
 
   app.use('/api', authRouter);
   app.use('/api', meRouter);
+  app.use('/api', linksRouter);
+  app.use('/api', todosRouter);
+  app.use('/api', notesRouter);
+  app.use('/api', eventsRouter);
 
   app.get('/api/health', (_req, res) => {
     res.json(
