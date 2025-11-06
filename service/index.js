@@ -1,5 +1,7 @@
 const express = require('express');
 const cookieParser = require('cookie-parser');
+const path = require('node:path');
+const fs = require('node:fs');
 
 const { version } = require('./package.json');
 const { buildEnvelope } = require('./response');
@@ -10,6 +12,9 @@ const todosRouter = require('./routes/todos');
 const notesRouter = require('./routes/notes');
 const eventsRouter = require('./routes/events');
 const weatherRouter = require('./routes/weather');
+
+const FRONTEND_DIST = path.resolve(__dirname, '..', 'dist');
+const FRONTEND_INDEX = path.join(FRONTEND_DIST, 'index.html');
 
 const DEFAULT_PORT = 4000;
 
@@ -43,6 +48,23 @@ function createApp() {
   app.use('/api', (_req, res) => {
     res.status(404).json(buildEnvelope(null, 'Not Found'));
   });
+
+  if (fs.existsSync(FRONTEND_INDEX)) {
+    app.use(
+      express.static(FRONTEND_DIST, {
+        index: false,
+        extensions: ['html']
+      })
+    );
+
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api/')) {
+        next();
+        return;
+      }
+      res.sendFile(FRONTEND_INDEX);
+    });
+  }
 
   app.use((error, _req, res, _next) => {
     console.error(error);
