@@ -1,0 +1,192 @@
+==================================================
+Backend Service Plan for Startup Project
+==================================================
+
+1) Overview
+------------
+You will now have two applications:
+- Frontend: your existing Vite/React app in the root directory.
+- Backend: a new Express-based API service in /service.
+
+The backend runs on port 4000 and exposes /api/* routes.
+During development, Vite proxies frontend requests from http://localhost:5173 to http://localhost:4000.
+
+==================================================
+2) File Structure
+==================================================
+/service
+  package.json
+  index.js
+  db.js
+  auth.js
+  routes/
+    links.js
+    todos.js
+    notes.js
+    events.js
+    me.js
+
+==================================================
+3) Tech Stack
+==================================================
+- express
+- cookie-parser
+- bcryptjs
+- uuid
+Storage: in-memory Maps or small JSON file persistence using fs.
+
+==================================================
+4) Authentication and Sessions
+==================================================
+Endpoints:
+  POST /api/auth/register  → create user (hash password)
+  POST /api/auth/login     → set session cookie
+  POST /api/auth/logout    → clear session cookie
+  GET  /api/me             → return current user profile
+
+Middleware:
+  requireAuth(req,res,next)
+    - Reads sid cookie
+    - Looks up session and attaches req.user
+    - Sends 401 if invalid
+
+Session Cookie:
+  sid=<uuid>; HttpOnly; SameSite=Lax; Secure (in prod)
+
+==================================================
+5) Core Data Models
+==================================================
+User {
+  id: string
+  username: string
+  hash: string
+}
+
+Link {
+  id: string
+  title: string
+  url: string
+  icon?: string
+  createdAt: ISOString
+  updatedAt: ISOString
+}
+
+Todo {
+  id: string
+  text: string
+  done: boolean
+  createdAt: ISOString
+  updatedAt: ISOString
+}
+
+Note {
+  id: string
+  title?: string
+  body: string
+  createdAt: ISOString
+  updatedAt: ISOString
+}
+
+Event {
+  id: string
+  title: string
+  startISO: ISOString
+  endISO?: ISOString
+  allDay?: boolean
+  createdAt: ISOString
+  updatedAt: ISOString
+}
+
+==================================================
+6) API Routes
+==================================================
+Protected (requireAuth):
+  /api/links
+    GET    → list user links
+    POST   → create new link
+    PUT    /:id → update link
+    DELETE /:id → delete link
+
+  /api/todos
+    GET / POST / PUT / DELETE same pattern
+
+  /api/notes
+    GET / POST / PUT / DELETE same pattern
+
+  /api/events
+    GET (optional ?from=&to= filters)
+    POST / PUT / DELETE same pattern
+
+Responses use a consistent envelope:
+  { data: ..., error: null } on success
+  { data: null, error: "message" } on error
+
+==================================================
+7) Third-Party API
+==================================================
+Use Open-Meteo for weather.
+Simplest: call directly from frontend (no API key, CORS-friendly).
+Optional backend proxy:
+  GET /api/weather?lat=&lon=
+    → fetch from Open-Meteo and return simplified JSON.
+
+This satisfies the "frontend calls a third-party API" rubric requirement.
+
+==================================================
+8) Development Flow
+==================================================
+- Run `npm run dev` in root (starts Vite frontend)
+- Run `npm start` in /service (starts backend)
+- Vite proxy handles API calls at /api/*
+- Debug backend in VS Code with Node debugger
+
+==================================================
+9) Deployment Plan
+==================================================
+Two separate package.json files:
+  - Root (frontend)
+  - /service (backend)
+Deploy backend using deployService.sh with `-s startup`.
+If 502 error appears, verify dependencies installed in /service.
+
+==================================================
+10) Rubric Alignment
+==================================================
+✔ 10% Express backend (index.js)
+✔ 10% Frontend served by Express static in production
+✔ 10% Frontend calls third-party (Open-Meteo)
+✔ 20% Backend provides multiple endpoints (CRUD)
+✔ 20% Frontend calls those endpoints
+✔ 30% Auth + restricted endpoints
+
+==================================================
+11) Example Requests and Responses
+==================================================
+POST /api/auth/register
+Body: { "username": "garrett", "password": "secret" }
+Response: { "data": { "id": "...", "username": "garrett" }, "error": null }
+
+POST /api/auth/login
+Body: { "username": "garrett", "password": "secret" }
+Response: { "data": { "id": "...", "username": "garrett" }, "error": null }
+Sets sid cookie
+
+GET /api/links
+Response: { "data": [ { "id": "...", "title": "BYU", "url": "https://byu.edu" } ], "error": null }
+
+POST /api/todos
+Body: { "text": "Buy diapers" }
+Response: { "data": { "id": "...", "text": "Buy diapers", "done": false }, "error": null }
+
+==================================================
+12) Optional Stretch Features
+==================================================
+- WebSocket (Socket.IO) for real-time updates
+- Tags and search
+- Rate limiting and input validation (zod)
+- JSON file persistence for simple storage
+
+==================================================
+Summary
+==================================================
+The backend provides authentication, CRUD for four feature types (links, todos, notes, events), and optional weather proxying. It aligns with the CS260 startup rubric, using Express, cookie-based auth, and a clean data structure. Once this plan is scaffolded, your frontend can call /api endpoints for all user data and persist sessions securely.
