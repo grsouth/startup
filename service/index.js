@@ -2,10 +2,11 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 
 const { version } = require('./package.json');
+const { buildEnvelope } = require('./response');
+const authRouter = require('./routes/auth');
+const meRouter = require('./routes/me');
 
 const DEFAULT_PORT = 4000;
-
-const buildEnvelope = (data, error = null) => ({ data, error });
 
 function createApp() {
   const app = express();
@@ -14,6 +15,9 @@ function createApp() {
 
   app.use(express.json({ limit: '100kb' }));
   app.use(cookieParser());
+
+  app.use('/api', authRouter);
+  app.use('/api', meRouter);
 
   app.get('/api/health', (_req, res) => {
     res.json(
@@ -32,7 +36,9 @@ function createApp() {
 
   app.use((error, _req, res, _next) => {
     console.error(error);
-    res.status(500).json(buildEnvelope(null, 'Internal Server Error'));
+    const status = typeof error.status === 'number' ? error.status : 500;
+    const message = status >= 500 ? 'Internal Server Error' : error.message || 'Request failed';
+    res.status(status).json(buildEnvelope(null, message));
   });
 
   return app;

@@ -7,6 +7,7 @@ const {
   findUserById,
   findUserByUsername
 } = require('./db');
+const { buildEnvelope } = require('./response');
 
 const SALT_ROUNDS = 10;
 const sessions = new Map();
@@ -96,20 +97,20 @@ async function authenticateUser({ username, password }) {
 const requireAuth = (req, res, next) => {
   const sessionId = req.cookies?.sid;
   if (!sessionId) {
-    res.status(401).json({ data: null, error: 'Authentication required' });
+    res.status(401).json(buildEnvelope(null, 'Authentication required'));
     return;
   }
 
   const session = touchSession(sessionId);
   if (!session) {
-    res.status(401).json({ data: null, error: 'Session expired' });
+    res.status(401).json(buildEnvelope(null, 'Session expired'));
     return;
   }
 
   const user = findUserById(session.userId);
   if (!user) {
     destroySession(sessionId);
-    res.status(401).json({ data: null, error: 'User no longer exists' });
+    res.status(401).json(buildEnvelope(null, 'User no longer exists'));
     return;
   }
 
