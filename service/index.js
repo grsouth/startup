@@ -57,8 +57,8 @@ function createApp() {
       })
     );
 
-    app.get('*', (req, res, next) => {
-      if (req.path.startsWith('/api/')) {
+    app.use((req, res, next) => {
+      if (req.method !== 'GET' || req.path === '/api' || req.path.startsWith('/api/')) {
         next();
         return;
       }
