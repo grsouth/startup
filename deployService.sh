@@ -16,48 +16,48 @@ if [[ -z "$key" || -z "$hostname" || -z "$service" ]]; then
   exit 1
 fi
 
-printf "\n----> Deploying service '%s' to %s with key %s\n" "$service" "$hostname" "$key"
+printf "\n----> Deploying service '%s' to %s with %s\n" "$service" "$hostname" "$key"
 
 printf "\n----> Building frontend bundle\n"
+rm -rf build dist
+mkdir -p build/public
 npm install
 npm run build
+cp -R dist/* build/public
 
-printf "\n----> Preparing backend dependencies\n"
-pushd service > /dev/null
-npm install
-popd > /dev/null
+printf "\n----> Packing backend service\n"
+mkdir -p build/service
+if command -v rsync >/dev/null 2>&1; then
+  rsync -av --exclude=node_modules service/ build/service >/dev/null
+else
+  cp -R service/* build/service/
+  rm -rf build/service/node_modules
+fi
 
-printf "\n----> Staging deployment artifacts\n"
-DEPLOY_DIR=".deploy"
-rm -rf "$DEPLOY_DIR"
-mkdir -p "$DEPLOY_DIR"
-cp -R dist "$DEPLOY_DIR/dist"
-cp -R service "$DEPLOY_DIR/service"
-rm -rf "$DEPLOY_DIR/service/node_modules"
-
-printf "\n----> Clearing target directories on %s\n" "$hostname"
+printf "\n----> Clearing target deployment on %s\n" "$hostname"
 ssh -i "$key" ubuntu@"$hostname" <<ENDSSH
 set -e
+rm -rf services/${service}
 mkdir -p services/${service}
-rm -rf services/${service}/dist
-rm -rf services/${service}/service
 ENDSSH
 
-printf "\n----> Uploading frontend bundle\n"
-scp -r -i "$key" "$DEPLOY_DIR/dist" ubuntu@"$hostname":services/"$service"/
+printf "\n----> Uploading bundle\n"
+scp -r -i "$key" build/* ubuntu@"$hostname":services/"$service"
 
-printf "\n----> Uploading backend service code\n"
-scp -r -i "$key" "$DEPLOY_DIR/service" ubuntu@"$hostname":services/"$service"/
-
-printf "\n----> Installing backend production dependencies on target\n"
+printf "\n----> Installing backend dependencies and restarting service\n"
 ssh -i "$key" ubuntu@"$hostname" <<ENDSSH
 set -e
 cd services/${service}/service
-npm install --omit=dev
-sudo systemctl restart ${service} || true
+[ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh"
+npm install
+if command -v pm2 >/dev/null 2>&1; then
+  pm2 restart ${service} || pm2 start index.js --name ${service}
+else
+  echo "pm2 not found; skipping process restart."
+fi
 ENDSSH
 
-printf "\n----> Cleaning up local deployment artifacts\n"
-rm -rf "$DEPLOY_DIR"
+printf "\n----> Cleaning local artifacts\n"
+rm -rf build dist
 
 printf "\n----> Deployment complete\n"

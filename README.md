@@ -52,7 +52,7 @@ At this point it's still static, but the bones are there. It's bundled up with v
 
 ## React Part 2
 
-We rebuilt the dashboard to run entirely on React and added interactive JavaScript for all the widgets. Quick links now run through a React component that lets you edit, add, and delete links. The weather card auto-detects a location, fetches mocked data, and shows a refresh button. The todo list, notebook, and calendar all manage state with `useState`/`useEffect`, saving data locally and providing dynamic updates.
+Rebuilt the dashboard to run entirely on React and added interactive JavaScript for all the widgets. Quick links now run through a React component that lets you edit, add, and delete links. The weather card auto-detects a location, fetches mocked data, and shows a refresh button. The todo list, notebook, and calendar all manage state with `useState`/`useEffect`, saving data locally and providing dynamic updates.
 
 ## Service Deliverable
 
@@ -65,28 +65,4 @@ We rebuilt the dashboard to run entirely on React and added interactive JavaScri
   - Calendar events persist timestamps and sort all-day vs timed entries.
 - Swapped the weather widget to call our `/api/weather` proxy (Open-Meteo) with live coordinates, geolocation fallback, and coordinate form overrides.
 - Created a shared `apiClient` helper for authenticated JSON requests with consistent error handling.
-- Documented the workflow in `notes.md` and refreshed this README with the backend/service instructions.
 
-### Running locally
-
-1. Install dependencies for the frontend and service:
-
-   ```bash
-   npm install
-   cd service && npm install
-   ```
-
-2. In one terminal start the backend service:
-
-   ```bash
-   cd service
-   npm run dev
-   ```
-
-3. In another terminal start the Vite dev server:
-
-   ```bash
-   npm run dev
-   ```
-
-Vite proxies `/api/*` requests to the Express service on port 4000, so the dashboard can authenticate and load data during development.

@@ -1,4 +1,4 @@
-const { randomUUID } = require('node:crypto');
+const { v4: uuidv4 } = require('uuid');
 
 const users = new Map();
 const collections = {
@@ -24,7 +24,7 @@ const getCollectionForUser = (collection, userId) => {
 };
 
 function createUser({ username, hash }) {
-  const id = randomUUID();
+  const id = uuidv4();
   const timestamp = now();
   const user = {
     id,
@@ -75,7 +75,7 @@ const createCollectionItem = (collection, userId, input) => {
   const store = getCollectionForUser(collection, userId);
   const timestamp = now();
   const record = {
-    id: randomUUID(),
+    id: uuidv4(),
     createdAt: timestamp,
     updatedAt: timestamp,
     ...input

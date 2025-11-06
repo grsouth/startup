@@ -13,7 +13,7 @@ const notesRouter = require('./routes/notes');
 const eventsRouter = require('./routes/events');
 const weatherRouter = require('./routes/weather');
 
-const FRONTEND_DIST = path.resolve(__dirname, '..', 'public');
+const FRONTEND_DIST = path.resolve(__dirname, '..', 'dist');
 const FRONTEND_INDEX = path.join(FRONTEND_DIST, 'index.html');
 
 const DEFAULT_PORT = 4000;

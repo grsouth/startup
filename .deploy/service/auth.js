@@ -1,5 +1,5 @@
 const bcrypt = require('bcryptjs');
-const { randomUUID } = require('node:crypto');
+const { v4: uuidv4 } = require('uuid');
 
 const {
   createUser,
@@ -30,7 +30,7 @@ const toPublicUser = (user) =>
     : null;
 
 const createSession = (userId) => {
-  const sessionId = randomUUID();
+  const sessionId = uuidv4();
   const createdAt = new Date().toISOString();
   sessions.set(sessionId, {
     id: sessionId,
