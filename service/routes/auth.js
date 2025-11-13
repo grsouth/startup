@@ -28,7 +28,7 @@ router.post('/auth/register', async (req, res, next) => {
     }
 
     const user = await registerUser({ username, password });
-    const sessionId = createSession(user.id);
+    const sessionId = await createSession(user.id);
     applySessionCookie(res, sessionId);
     res.status(201).json(buildEnvelope(user));
   } catch (error) {
@@ -45,7 +45,7 @@ router.post('/auth/login', async (req, res, next) => {
     }
 
     const user = await authenticateUser({ username, password });
-    const sessionId = createSession(user.id);
+    const sessionId = await createSession(user.id);
     applySessionCookie(res, sessionId);
     res.json(buildEnvelope(user));
   } catch (error) {
@@ -53,13 +53,17 @@ router.post('/auth/login', async (req, res, next) => {
   }
 });
 
-router.post('/auth/logout', (req, res) => {
-  const sessionId = req.cookies?.[SESSION_COOKIE_NAME];
-  if (sessionId) {
-    destroySession(sessionId);
+router.post('/auth/logout', async (req, res, next) => {
+  try {
+    const sessionId = req.cookies?.[SESSION_COOKIE_NAME];
+    if (sessionId) {
+      await destroySession(sessionId);
+    }
+    clearSessionCookie(res);
+    res.json(buildEnvelope({ success: true }));
+  } catch (error) {
+    next(error);
   }
-  clearSessionCookie(res);
-  res.json(buildEnvelope({ success: true }));
 });
 
 module.exports = router;

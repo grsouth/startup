@@ -12,6 +12,29 @@ const DEFAULT_CLIENT_OPTIONS = Object.freeze({
     deprecationErrors: true
   }
 });
+const USERS_COLLECTION = 'users';
+const SESSIONS_COLLECTION = 'sessions';
+const now = () => new Date().toISOString();
+
+const clone = (record) => {
+  if (!record || typeof record !== 'object') {
+    return record ?? null;
+  }
+  const { _id, ...rest } = record;
+  const id =
+    typeof rest.id === 'string'
+      ? rest.id
+      : typeof _id === 'string'
+        ? _id
+        : _id && typeof _id.toString === 'function'
+          ? _id.toString()
+          : undefined;
+  const result = { ...rest };
+  if (typeof id !== 'undefined') {
+    result.id = id;
+  }
+  return result;
+};
 
 let mongoClient = null;
 let mongoDb = null;
@@ -83,11 +106,23 @@ async function ensureIndexes(dbInstance = mongoDb) {
   if (!dbInstance) {
     return;
   }
-  await dbInstance.collection('users').createIndex(
+  await dbInstance.collection(USERS_COLLECTION).createIndex(
     { username: 1 },
     {
       name: 'users_username_unique',
       unique: true
+    }
+  );
+  await dbInstance.collection(SESSIONS_COLLECTION).createIndex(
+    { userId: 1 },
+    {
+      name: 'sessions_user_id'
+    }
+  );
+  await dbInstance.collection(SESSIONS_COLLECTION).createIndex(
+    { updatedAt: 1 },
+    {
+      name: 'sessions_updated_at'
     }
   );
 }
@@ -174,17 +209,110 @@ const closeDatabase = async (force = false) => {
   connectPromise = null;
 };
 
-const users = new Map();
+const sanitizeUpdates = (updates = {}) => {
+  if (!updates || typeof updates !== 'object') {
+    return {};
+  }
+  const { id, _id, ...rest } = updates;
+  return rest;
+};
+
+async function createUser({ username, hash }) {
+  const timestamp = now();
+  const user = {
+    _id: randomUUID(),
+    username,
+    hash,
+    createdAt: timestamp,
+    updatedAt: timestamp
+  };
+  await getCollection(USERS_COLLECTION).insertOne(user);
+  return clone(user);
+}
+
+async function updateUser(id, updates) {
+  if (!id) {
+    return null;
+  }
+  const timestamp = now();
+  const sanitized = {
+    ...sanitizeUpdates(updates),
+    updatedAt: timestamp
+  };
+  const result = await getCollection(USERS_COLLECTION).findOneAndUpdate(
+    { _id: id },
+    { $set: sanitized },
+    { returnDocument: 'after' }
+  );
+  return clone(result.value);
+}
+
+const findUserById = async (id) => {
+  if (!id) {
+    return null;
+  }
+  const user = await getCollection(USERS_COLLECTION).findOne({ _id: id });
+  return clone(user);
+};
+
+const findUserByUsername = async (username) => {
+  if (!username) {
+    return null;
+  }
+  const user = await getCollection(USERS_COLLECTION).findOne({ username });
+  return clone(user);
+};
+
+async function createSessionRecord(userId) {
+  if (!userId) {
+    throw new Error('User ID required to create session');
+  }
+  const timestamp = now();
+  const session = {
+    _id: randomUUID(),
+    userId,
+    createdAt: timestamp,
+    updatedAt: timestamp
+  };
+  await getCollection(SESSIONS_COLLECTION).insertOne(session);
+  return clone(session);
+}
+
+const findSessionById = async (sessionId) => {
+  if (!sessionId) {
+    return null;
+  }
+  const session = await getCollection(SESSIONS_COLLECTION).findOne({ _id: sessionId });
+  return clone(session);
+};
+
+const touchSessionRecord = async (sessionId) => {
+  if (!sessionId) {
+    return null;
+  }
+  const timestamp = now();
+  const result = await getCollection(SESSIONS_COLLECTION).findOneAndUpdate(
+    { _id: sessionId },
+    { $set: { updatedAt: timestamp } },
+    { returnDocument: 'after' }
+  );
+  return clone(result.value);
+};
+
+const deleteSessionRecord = async (sessionId) => {
+  if (!sessionId) {
+    return false;
+  }
+  const result = await getCollection(SESSIONS_COLLECTION).deleteOne({ _id: sessionId });
+  return result.deletedCount > 0;
+};
+
 const collections = {
   links: new Map(),
   todos: new Map(),
   notes: new Map(),
   events: new Map()
 };
-
-const now = () => new Date().toISOString();
-
-const clone = (record) => ({ ...record });
 
 const getCollectionForUser = (collection, userId) => {
   if (!collections[collection]) {
@@ -195,49 +323,6 @@ const getCollectionForUser = (collection, userId) => {
     store.set(userId, new Map());
   }
   return store.get(userId);
-};
-
-function createUser({ username, hash }) {
-  const id = randomUUID();
-  const timestamp = now();
-  const user = {
-    id,
-    username,
-    hash,
-    createdAt: timestamp,
-    updatedAt: timestamp
-  };
-  users.set(id, user);
-  return clone(user);
-}
-
-function updateUser(id, updates) {
-  const existing = users.get(id);
-  if (!existing) {
-    return null;
-  }
-  const timestamp = now();
-  const next = {
-    ...existing,
-    ...updates,
-    updatedAt: timestamp
-  };
-  users.set(id, next);
-  return clone(next);
-}
-
-const findUserById = (id) => {
-  const user = users.get(id);
-  return user ? clone(user) : null;
-};
-
-const findUserByUsername = (username) => {
-  for (const user of users.values()) {
-    if (user.username === username) {
-      return clone(user);
-    }
-  }
-  return null;
 };
 
 const listCollection = (collection, userId) => {
@@ -284,65 +369,6 @@ const removeCollectionItem = (collection, userId, id) => {
   return clone(existing);
 };
 
-const reset = () => {
-  users.clear();
-  Object.values(collections).forEach((collection) => {
-    collection.clear();
-  });
-};
-
-const exportData = () => ({
-  users: Array.from(users.values(), clone),
-  collections: Object.fromEntries(
-    Object.entries(collections).map(([name, collection]) => [
-      name,
-      Object.fromEntries(
-        Array.from(collection.entries()).map(([userId, records]) => [
-          userId,
-          Array.from(records.values(), clone)
-        ])
-      )
-    ])
-  )
-});
-
-const importData = (data) => {
-  reset();
-  if (!data) {
-    return;
-  }
-  if (Array.isArray(data.users)) {
-    data.users.forEach((user) => {
-      if (user?.id && user?.username && user?.hash) {
-        users.set(user.id, { ...user });
-      }
-    });
-  }
-
-  if (data.collections && typeof data.collections === 'object') {
-    for (const [name, userCollections] of Object.entries(data.collections)) {
-      if (!collections[name] || typeof userCollections !== 'object') {
-        continue;
-      }
-      const targetCollection = collections[name];
-      for (const [userId, records] of Object.entries(userCollections)) {
-        if (!Array.isArray(records)) {
-          continue;
-        }
-        const bucket = new Map();
-        records.forEach((record) => {
-          if (record?.id) {
-            bucket.set(record.id, { ...record });
-          }
-        });
-        if (bucket.size > 0) {
-          targetCollection.set(userId, bucket);
-        }
-      }
-    }
-  }
-};
-
 module.exports = {
   loadDbConfig,
   initDatabase,
@@ -355,12 +381,13 @@ module.exports = {
   updateUser,
   findUserById,
   findUserByUsername,
+  createSessionRecord,
+  findSessionById,
+  touchSessionRecord,
+  deleteSessionRecord,
   listCollection,
   createCollectionItem,
   updateCollectionItem,
   removeCollectionItem,
-  reset,
-  exportData,
-  importData,
   collections: Object.freeze({ ...collections })
 };

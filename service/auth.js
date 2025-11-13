@@ -1,16 +1,17 @@
 const bcrypt = require('bcryptjs');
-const { randomUUID } = require('node:crypto');
 
 const {
   createUser,
-  updateUser,
   findUserById,
-  findUserByUsername
+  findUserByUsername,
+  createSessionRecord,
+  findSessionById,
+  touchSessionRecord,
+  deleteSessionRecord
 } = require('./db');
 const { buildEnvelope } = require('./response');
 
 const SALT_ROUNDS = 10;
-const sessions = new Map();
 
 const hashPassword = async (password) => {
   const salt = await bcrypt.genSalt(SALT_ROUNDS);
@@ -29,40 +30,16 @@ const toPublicUser = (user) =>
       }
     : null;
 
-const createSession = (userId) => {
-  const sessionId = randomUUID();
-  const createdAt = new Date().toISOString();
-  sessions.set(sessionId, {
-    id: sessionId,
-    userId,
-    createdAt,
-    updatedAt: createdAt
-  });
-  return sessionId;
+const createSession = async (userId) => {
+  const session = await createSessionRecord(userId);
+  return session?.id;
 };
 
-const getSession = (sessionId) => {
-  const session = sessions.get(sessionId);
-  if (!session) {
-    return null;
-  }
-  return { ...session };
-};
+const getSession = (sessionId) => findSessionById(sessionId);
 
-const touchSession = (sessionId) => {
-  const session = sessions.get(sessionId);
-  if (!session) {
-    return null;
-  }
-  const updated = {
-    ...session,
-    updatedAt: new Date().toISOString()
-  };
-  sessions.set(sessionId, updated);
-  return { ...updated };
-};
+const touchSession = (sessionId) => touchSessionRecord(sessionId);
 
-const destroySession = (sessionId) => sessions.delete(sessionId);
+const destroySession = (sessionId) => deleteSessionRecord(sessionId);
 
 const credentialsError = () => {
   const error = new Error('Invalid username or password');
@@ -71,19 +48,19 @@ const credentialsError = () => {
 };
 
 async function registerUser({ username, password }) {
-  const existing = findUserByUsername(username);
+  const existing = await findUserByUsername(username);
   if (existing) {
     const error = new Error('Username already exists');
     error.status = 400;
     throw error;
   }
   const hash = await hashPassword(password);
-  const user = createUser({ username, hash });
+  const user = await createUser({ username, hash });
   return toPublicUser(user);
 }
 
 async function authenticateUser({ username, password }) {
-  const user = findUserByUsername(username);
+  const user = await findUserByUsername(username);
   if (!user) {
     throw credentialsError();
   }
@@ -94,29 +71,33 @@ async function authenticateUser({ username, password }) {
   return toPublicUser(user);
 }
 
-const requireAuth = (req, res, next) => {
-  const sessionId = req.cookies?.sid;
-  if (!sessionId) {
-    res.status(401).json(buildEnvelope(null, 'Authentication required'));
-    return;
-  }
+const requireAuth = async (req, res, next) => {
+  try {
+    const sessionId = req.cookies?.sid;
+    if (!sessionId) {
+      res.status(401).json(buildEnvelope(null, 'Authentication required'));
+      return;
+    }
 
-  const session = touchSession(sessionId);
-  if (!session) {
-    res.status(401).json(buildEnvelope(null, 'Session expired'));
-    return;
-  }
+    const session = await touchSession(sessionId);
+    if (!session) {
+      res.status(401).json(buildEnvelope(null, 'Session expired'));
+      return;
+    }
 
-  const user = findUserById(session.userId);
-  if (!user) {
-    destroySession(sessionId);
-    res.status(401).json(buildEnvelope(null, 'User no longer exists'));
-    return;
-  }
+    const user = await findUserById(session.userId);
+    if (!user) {
+      await destroySession(sessionId);
+      res.status(401).json(buildEnvelope(null, 'User no longer exists'));
+      return;
+    }
 
-  req.user = toPublicUser(user);
-  req.session = session;
-  next();
+    req.user = toPublicUser(user);
+    req.session = session;
+    next();
+  } catch (error) {
+    next(error);
+  }
 };
 
 const SESSION_COOKIE_NAME = 'sid';
@@ -154,6 +135,5 @@ module.exports = {
   applySessionCookie,
   clearSessionCookie,
   toPublicUser,
-  SESSION_COOKIE_NAME,
-  sessions
+  SESSION_COOKIE_NAME
 };
