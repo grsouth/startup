@@ -5,6 +5,7 @@ const fs = require('node:fs');
 
 const { version } = require('./package.json');
 const { buildEnvelope } = require('./response');
+const { initDatabase } = require('./db');
 const authRouter = require('./routes/auth');
 const meRouter = require('./routes/me');
 const linksRouter = require('./routes/links');
@@ -92,7 +93,14 @@ function startServer(app, port) {
 }
 
 if (require.main === module) {
-  startServer(createApp(), process.env.PORT);
+  initDatabase()
+    .then(() => {
+      startServer(createApp(), process.env.PORT);
+    })
+    .catch((error) => {
+      console.error('Failed to initialize database connection', error);
+      process.exit(1);
+    });
 }
 
 module.exports = {

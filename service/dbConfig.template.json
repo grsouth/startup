@@ -1,0 +1,5 @@
+{
+  "_comment": "Rename to dbConfig.json and replace with your MongoDB Atlas connection info",
+  "uri": "mongodb+srv://USERNAME:PASSWORD@cluster.mongodb.net/",
+  "dbName": "startup"
+}
