@@ -213,8 +213,22 @@ const sanitizeUpdates = (updates = {}) => {
   if (!updates || typeof updates !== 'object') {
     return {};
   }
-  const { id, _id, ...rest } = updates;
+  const { id, _id, userId, createdAt, updatedAt, ...rest } = updates;
   return rest;
+};
+
+const DATA_COLLECTIONS = Object.freeze({
+  links: 'links',
+  todos: 'todos',
+  notes: 'notes',
+  events: 'events'
+});
+
+const resolveDataCollection = (name) => {
+  if (!name || !DATA_COLLECTIONS[name]) {
+    throw new Error(`Unknown collection "${name}"`);
+  }
+  return DATA_COLLECTIONS[name];
 };
 
 async function createUser({ username, hash }) {
@@ -307,66 +321,51 @@ const deleteSessionRecord = async (sessionId) => {
   return result.deletedCount > 0;
 };
 
-const collections = {
-  links: new Map(),
-  todos: new Map(),
-  notes: new Map(),
-  events: new Map()
+const listCollection = async (collection, userId) => {
+  const store = getCollection(resolveDataCollection(collection));
+  const records = await store.find({ userId }).toArray();
+  return records.map(clone);
 };
 
-const getCollectionForUser = (collection, userId) => {
-  if (!collections[collection]) {
-    throw new Error(`Unknown collection "${collection}"`);
-  }
-  const store = collections[collection];
-  if (!store.has(userId)) {
-    store.set(userId, new Map());
-  }
-  return store.get(userId);
-};
-
-const listCollection = (collection, userId) => {
-  const store = getCollectionForUser(collection, userId);
-  return Array.from(store.values(), clone);
-};
-
-const createCollectionItem = (collection, userId, input) => {
-  const store = getCollectionForUser(collection, userId);
+const createCollectionItem = async (collection, userId, input) => {
   const timestamp = now();
-  const record = {
-    id: randomUUID(),
+  const data = {
+    _id: randomUUID(),
+    userId,
     createdAt: timestamp,
     updatedAt: timestamp,
-    ...input
+    ...sanitizeUpdates(input)
   };
-  store.set(record.id, record);
-  return clone(record);
+  const store = getCollection(resolveDataCollection(collection));
+  await store.insertOne(data);
+  return clone(data);
 };
 
-const updateCollectionItem = (collection, userId, id, updates) => {
-  const store = getCollectionForUser(collection, userId);
-  const existing = store.get(id);
-  if (!existing) {
+const updateCollectionItem = async (collection, userId, id, updates) => {
+  if (!id) {
     return null;
   }
-  const timestamp = now();
-  const next = {
-    ...existing,
-    ...updates,
-    updatedAt: timestamp
-  };
-  store.set(id, next);
-  return clone(next);
+  const sanitized = sanitizeUpdates(updates);
+  if (Object.keys(sanitized).length === 0) {
+    return null;
+  }
+  sanitized.updatedAt = now();
+  const store = getCollection(resolveDataCollection(collection));
+  const result = await store.findOneAndUpdate(
+    { _id: id, userId },
+    { $set: sanitized },
+    { returnDocument: 'after' }
+  );
+  return clone(result.value);
 };
 
-const removeCollectionItem = (collection, userId, id) => {
-  const store = getCollectionForUser(collection, userId);
-  const existing = store.get(id);
-  if (!existing) {
+const removeCollectionItem = async (collection, userId, id) => {
+  if (!id) {
     return null;
   }
-  store.delete(id);
-  return clone(existing);
+  const store = getCollection(resolveDataCollection(collection));
+  const result = await store.findOneAndDelete({ _id: id, userId });
+  return clone(result.value);
 };
 
 module.exports = {
@@ -388,6 +387,5 @@ module.exports = {
   listCollection,
   createCollectionItem,
   updateCollectionItem,
-  removeCollectionItem,
-  collections: Object.freeze({ ...collections })
+  removeCollectionItem
 };

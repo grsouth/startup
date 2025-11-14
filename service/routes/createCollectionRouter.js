@@ -34,9 +34,9 @@ function createCollectionRouter(options) {
 
   const router = express.Router();
 
-  router.get(basePath, requireAuth, (req, res, next) => {
+  router.get(basePath, requireAuth, async (req, res, next) => {
     try {
-      const records = listCollection(options.collection, req.user.id);
+      const records = await listCollection(options.collection, req.user.id);
       const prepared = prepareList(records, req);
       res.json(buildEnvelope(prepared));
     } catch (error) {
@@ -44,7 +44,7 @@ function createCollectionRouter(options) {
     }
   });
 
-  router.post(basePath, requireAuth, (req, res, next) => {
+  router.post(basePath, requireAuth, async (req, res, next) => {
     try {
       const { value, error } = runNormalizer(normalizeCreate, req.body, {
         mode: 'create',
@@ -54,14 +54,14 @@ function createCollectionRouter(options) {
         res.status(400).json(buildEnvelope(null, error));
         return;
       }
-      const record = createCollectionItem(options.collection, req.user.id, value);
+      const record = await createCollectionItem(options.collection, req.user.id, value);
       res.status(201).json(buildEnvelope(record));
     } catch (error) {
       next(error);
     }
   });
 
-  router.put(`${basePath}/:id`, requireAuth, (req, res, next) => {
+  router.put(`${basePath}/:id`, requireAuth, async (req, res, next) => {
     try {
       const { value, error } = runNormalizer(normalizeUpdate, req.body, {
         mode: 'update',
@@ -75,7 +75,7 @@ function createCollectionRouter(options) {
         res.status(400).json(buildEnvelope(null, 'No fields to update'));
         return;
       }
-      const updated = updateCollectionItem(
+      const updated = await updateCollectionItem(
         options.collection,
         req.user.id,
         req.params.id,
@@ -91,9 +91,9 @@ function createCollectionRouter(options) {
     }
   });
 
-  router.delete(`${basePath}/:id`, requireAuth, (req, res, next) => {
+  router.delete(`${basePath}/:id`, requireAuth, async (req, res, next) => {
     try {
-      const removed = removeCollectionItem(
+      const removed = await removeCollectionItem(
         options.collection,
         req.user.id,
         req.params.id
