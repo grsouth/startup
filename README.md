@@ -66,3 +66,10 @@ Rebuilt the dashboard to run entirely on React and added interactive JavaScript 
 - Swapped the weather widget to call our `/api/weather` proxy (Open-Meteo) with live coordinates, geolocation fallback, and coordinate form overrides.
 - Created a shared `apiClient` helper for authenticated JSON requests with consistent error handling.
 
+## Database Deliverable
+
+- Replaced the in-memory Maps in `service/db.js` with a real MongoDB driver. Users, sessions, links, todos, notes, and events now live in Atlas with UUID primary keys, timestamping, and per-user query filters.
+- Updated `service/auth.js` and every CRUD router to await Mongo reads/writes so logins survive restarts and dashboard data reloads after a full refresh.
+- Added `service/dbConfig.template.json` (rename to `dbConfig.json`) plus env var support (`MONGODB_URI`/`MONGODB_DB_NAME`). The template documents the exact JSON shape we expect on the server.
+- `service/index.js` now holds the server start until `initDatabase()` succeeds, so production never boots without a working database connection.
+- Deployment stays the same: run `./deployService.sh -k <pem> -h <hostname> -s startup` to bundle the React frontend (`build/public`) and backend (`build/service`) before uploading to `services/startup` on the VM. The script reinstalls dependencies server-side and restarts PM2 for the `startup` process.

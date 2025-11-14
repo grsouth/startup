@@ -300,3 +300,11 @@ console.timeEnd('x');
 debugger; // breaks in DevTools
 ```
 
+---
+
+## Mongo + Auth Persistence
+
+- Use a single `MongoClient` in `service/db.js` and wait for `initDatabase()` before starting Express so the API never handles requests without a database.
+- Store UUIDs as `_id` so we can keep returning `id` strings to the frontend while still benefiting from Mongo indexes (`users.username`, `sessions.updatedAt`, etc.).
+- Convert the auth/session middleware to async/await. When a session cookie shows up we call `touchSessionRecord` and `findUserById`, so a deleted user automatically invalidates their sessions.
+- Each CRUD route now scopes queries by `userId`, which makes it trivial to filter on the server instead of trusting the client.

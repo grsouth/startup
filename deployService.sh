@@ -26,11 +26,12 @@ npm run build
 cp -R dist/* build/public
 
 printf "\n----> Packing backend service\n"
+mkdir -p build/service
 if command -v rsync >/dev/null 2>&1; then
-  rsync -av --exclude=node_modules service/ build/ >/dev/null
+  rsync -av --exclude=node_modules service/ build/service/ >/dev/null
 else
-  cp -R service/* build/
-  rm -rf build/node_modules
+  cp -R service/* build/service/
+  rm -rf build/service/node_modules
 fi
 
 printf "\n----> Clearing target deployment on %s\n" "$hostname"
@@ -46,7 +47,7 @@ scp -r -i "$key" build/* ubuntu@"$hostname":services/"$service"
 printf "\n----> Installing backend dependencies and restarting service\n"
 ssh -i "$key" ubuntu@"$hostname" <<ENDSSH
 set -e
-cd services/${service}
+cd services/${service}/service
 [ -s "\$HOME/.nvm/nvm.sh" ] && . "\$HOME/.nvm/nvm.sh"
 npm install --omit=dev
 if command -v pm2 >/dev/null 2>&1; then
